@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.0.2...v1.1.0) (2026-03-11)
+
+### 🚀 Features
+
+* Implement user authentication and settings management ([2658c7e](https://github.com/xdev-asia-labs/x-postgres-backup/commit/2658c7e498b9d9edeefae042cfbf7e455c95c3b4))
+
 ## [1.0.2](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.0.1...v1.0.2) (2026-03-11)
 
 ### 🐛 Bug Fixes
