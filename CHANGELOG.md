@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.0.0...v1.0.1) (2026-03-11)
+
+### 🐛 Bug Fixes
+
+* resolve CI/CD lint error, Docker build failure, and Docker login issues ([bde899a](https://github.com/xdev-asia-labs/x-postgres-backup/commit/bde899af91a2338ed8ce76b5bfd61fed6fc15e36))
+
 ## 1.0.0 (2026-03-11)
 
 ### 🚀 Features
