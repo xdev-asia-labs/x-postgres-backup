@@ -1,82 +1,245 @@
 # 🐘 x-postgres-backup
 
-Hệ thống quản lý backup/restore PostgreSQL HA Cluster (Patroni) với Web Dashboard và Job Scheduler.
+![x-postgres-backup banner](banner.png)
 
-## 📋 Mục lục
+A comprehensive backup and restore management system for PostgreSQL High Availability Clusters (Patroni) with a web dashboard, automated job scheduling, and real-time notifications.
 
-- [Giới thiệu](#-giới-thiệu)
-- [Tính năng](#-tính-năng)
-- [Yêu cầu hệ thống](#-yêu-cầu-hệ-thống)
-- [Cài đặt](#-cài-đặt)
-- [Cấu hình](#-cấu-hình)
-- [Sử dụng](#-sử-dụng)
+---
+
+## 📋 Table of Contents
+
+- [Introduction](#-introduction)
+- [Features](#-features)
+- [System Requirements](#-system-requirements)
+- [Installation](#-installation)
+- [Configuration](#%EF%B8%8F-configuration)
+- [Usage](#-usage)
 - [API Endpoints](#-api-endpoints)
+- [Architecture](#-architecture)
 - [Deployment](#-deployment)
 - [CI/CD & Release](#-cicd--release)
+- [Internationalization (i18n)](#-internationalization-i18n)
 - [Troubleshooting](#-troubleshooting)
+- [Monitoring & Logs](#-monitoring--logs)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-## 📖 Giới thiệu
+## 📖 Introduction
 
-`x-postgres-backup` là một công cụ toàn diện để quản lý backup và restore cho PostgreSQL High Availability Cluster (sử dụng Patroni). Hệ thống cung cấp giao diện web thân thiện, lập lịch tự động, và thông báo realtime cho các hoạt động backup/restore.
+`x-postgres-backup` is an all-in-one tool for managing backups and restores on PostgreSQL HA clusters that use [Patroni](https://patroni.readthedocs.io/). It provides a user-friendly web interface, automated scheduling via cron expressions, backup integrity verification, and smart notifications through Telegram and email.
 
-### Tính năng chính
+### Key Highlights
 
-✅ **Dashboard trực quan**: Giám sát cluster, lịch sử backup, disk usage  
-✅ **Backup Management**: Hỗ trợ `pg_basebackup` và `pg_dump` với lập lịch tự động  
-✅ **Restore Management**: Restore từ backup với UI trực quan, dễ sử dụng  
-✅ **Job Scheduler**: Cấu hình lịch backup/cleanup/verify qua web interface  
-✅ **Cluster Monitoring**: Theo dõi trạng thái cluster realtime qua Patroni REST API  
-✅ **Backup Verification**: Tự động kiểm tra tính toàn vẹn của backup  
-✅ **Smart Notifications**: Thông báo qua Telegram và Email khi có sự kiện quan trọng  
-✅ **Retention Management**: Tự động dọn dẹp backup cũ theo chính sách  
+✅ **Intuitive Dashboard** — Real-time cluster monitoring, backup history, and disk usage at a glance  
+✅ **Backup Management** — Supports both `pg_basebackup` (physical) and `pg_dump` (logical) with automated scheduling  
+✅ **Restore Management** — Point-and-click restore from any backup with a visual UI  
+✅ **Job Scheduler** — Configure backup/cleanup/verify schedules through the web interface using cron expressions  
+✅ **Cluster Monitoring** — Live cluster status via the Patroni REST API  
+✅ **Backup Verification** — Automatic integrity checks for all stored backups  
+✅ **Smart Notifications** — Telegram and email alerts for backup/restore success or failure  
+✅ **Retention Management** — Automatic cleanup of old backups based on configurable retention policies  
+✅ **Multi-Language UI** — Supports English, Vietnamese, Chinese, and Japanese  
+✅ **Authentication & SSO** — JWT-based auth with Google and Microsoft SSO support  
 
-## 🛠️ Tính năng
+## 🛠️ Features
 
-| Tính năng | Mô tả |
-|-----------|-------|
-| **Dashboard** | Tổng quan trạng thái cluster, backup history, disk usage |
-| **Backup Management** | Chạy backup thủ công hoặc theo lịch (pg_basebackup, pg_dump) |
-| **Restore Management** | Restore từ backup với UI trực quan |
-| **Job Scheduler** | Cấu hình lịch backup/cleanup/verify qua web |
-| **Cluster Monitoring** | Realtime cluster status từ Patroni REST API |
-| **Verification** | Tự động kiểm tra tính toàn vẹn backup |
-| **Notifications** | Thông báo qua Telegram và Email khi backup/restore thành công hoặc thất bại |
+| Feature | Description |
+|---------|-------------|
+| **Dashboard** | Cluster status overview, backup history, disk usage monitoring |
+| **Backup Management** | Run backups manually or on schedule (`pg_basebackup`, `pg_dump`) |
+| **Restore Management** | Restore from any backup with a visual, intuitive interface |
+| **Job Scheduler** | Configure backup/cleanup/verify schedules via cron expressions |
+| **Cluster Monitoring** | Real-time cluster status from the Patroni REST API |
+| **Verification** | Automatic backup integrity checks |
+| **Notifications** | Telegram & email alerts on backup/restore success or failure |
+| **Authentication** | JWT auth, Google SSO, Microsoft SSO, user management |
+| **i18n** | Multi-language support (EN, VI, ZH, JA) |
 
-## 💻 Yêu cầu hệ thống
+## 🏗️ Architecture
 
-### Phần mềm bắt buộc
+### System Workflow
 
-- **Python**: 3.11 hoặc cao hơn
+```mermaid
+graph TB
+    subgraph "PostgreSQL HA Cluster"
+        P1[Patroni Node 1<br/>Leader]
+        P2[Patroni Node 2<br/>Replica]
+        P3[Patroni Node 3<br/>Replica]
+    end
+
+    subgraph "x-postgres-backup"
+        direction TB
+        WEB[Web Dashboard<br/>Jinja2 + HTMX]
+        API[FastAPI REST API]
+        SCHED[APScheduler<br/>Job Scheduler]
+        AUTH[Auth Module<br/>JWT + SSO]
+        
+        WEB --> API
+        API --> SCHED
+        API --> AUTH
+    end
+
+    subgraph "Services"
+        BS[Backup Service<br/>pg_basebackup / pg_dump]
+        RS[Restore Service<br/>pg_restore]
+        CS[Cluster Service<br/>Patroni REST Client]
+        VS[Verify Service<br/>Integrity Checks]
+        NS[Notification Service<br/>Telegram + Email]
+    end
+
+    subgraph "Storage"
+        DB[(SQLite<br/>State & History)]
+        DISK[(Backup Storage<br/>/var/backups/postgresql)]
+    end
+
+    API --> BS & RS & CS & VS
+    BS --> NS
+    RS --> NS
+    SCHED --> BS & VS
+
+    CS -->|REST API| P1 & P2 & P3
+    BS -->|pg_basebackup| P1
+    BS -->|pg_dump| P1
+    RS -->|pg_restore| P1
+
+    BS --> DISK
+    RS --> DISK
+    API --> DB
+    SCHED --> DB
+```
+
+### Backup & Restore Workflow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Web as Web Dashboard
+    participant API as FastAPI
+    participant Svc as Backup Service
+    participant PG as PostgreSQL Leader
+    participant Disk as Backup Storage
+    participant Notify as Notification Service
+
+    User->>Web: Click "Run Backup"
+    Web->>API: POST /api/backups/run
+    API->>Svc: Execute backup
+    Svc->>PG: pg_basebackup / pg_dump
+    PG-->>Svc: Data stream
+    Svc->>Disk: Write compressed backup
+    Svc->>API: Record result in SQLite
+    
+    alt Success
+        API->>Notify: Send success alert
+        Notify-->>User: 📧 Telegram / Email
+    else Failure
+        API->>Notify: Send failure alert
+        Notify-->>User: 🚨 Telegram / Email
+    end
+    
+    API-->>Web: Return status
+    Web-->>User: Show result
+```
+
+### Tech Stack
+
+- **Backend**: Python 3.11+ / FastAPI
+- **Frontend**: Jinja2 + HTMX + Tailwind CSS (CDN)
+- **Scheduler**: APScheduler (cron-like scheduling)
+- **Database**: SQLite (local state tracking)
+- **HTTP Client**: httpx (async Patroni API calls)
+- **Notifications**: aiosmtplib (Email), httpx (Telegram)
+- **Authentication**: JWT + OAuth2 (Google, Microsoft SSO)
+
+### Project Structure
+
+```
+x-postgres-backup/
+├── app/
+│   ├── main.py              # FastAPI application entry point
+│   ├── config.py            # Environment configuration loader
+│   ├── database.py          # SQLAlchemy setup + session management
+│   ├── models.py            # Database models (BackupRecord, JobHistory, JobSchedule)
+│   ├── scheduler.py         # APScheduler integration + job definitions
+│   ├── i18n.py              # Internationalization module
+│   │
+│   ├── locales/             # Translation files
+│   │   ├── en.json          # English (default)
+│   │   ├── vi.json          # Vietnamese
+│   │   ├── zh.json          # Chinese (Simplified)
+│   │   └── ja.json          # Japanese
+│   │
+│   ├── routers/
+│   │   ├── api.py           # REST API endpoints
+│   │   ├── auth.py          # Authentication routes
+│   │   └── dashboard.py     # HTML dashboard routes (SSR)
+│   │
+│   ├── services/
+│   │   ├── backup.py        # pg_basebackup + pg_dump operations
+│   │   ├── restore.py       # pg_restore operations
+│   │   ├── cluster.py       # Patroni REST API client
+│   │   ├── verify.py        # Backup integrity verification
+│   │   ├── auth.py          # Authentication service
+│   │   └── notification.py  # Telegram & Email notification service
+│   │
+│   ├── static/
+│   │   └── css/
+│   │       └── style.css    # Custom CSS (extends Tailwind)
+│   │
+│   └── templates/           # Jinja2 HTML templates
+│       ├── base.html        # Base template layout (with language switcher)
+│       ├── dashboard.html   # Dashboard overview
+│       ├── backups.html     # Backup management
+│       ├── restore.html     # Restore management
+│       ├── jobs.html        # Job scheduler
+│       ├── settings.html    # Settings page
+│       └── login.html       # Login / Register page
+│
+├── data/                    # SQLite database directory (created at runtime)
+├── banner.png               # Project banner image
+├── Dockerfile               # Docker image definition
+├── docker-compose.yml       # Docker Compose configuration
+├── requirements.txt         # Python dependencies
+├── .env.example             # Environment variables template
+├── .gitignore
+├── LICENSE
+└── README.md
+```
+
+## 💻 System Requirements
+
+### Required Software
+
+- **Python**: 3.11 or higher
 - **PostgreSQL Client Tools**: `pg_basebackup`, `pg_dump`, `pg_restore`, `psql`
   - Debian/Ubuntu: `sudo apt install postgresql-client-16`
   - RHEL/CentOS: `sudo yum install postgresql16`
   - macOS: `brew install postgresql@16`
-- **PostgreSQL HA Cluster**: Patroni 3.x hoặc 4.x với etcd
-- **Disk Space**: Đủ không gian để lưu trữ backup (khuyến nghị >= 2x kích thước database)
+- **PostgreSQL HA Cluster**: Patroni 3.x or 4.x with etcd
+- **Disk Space**: Sufficient space for backup storage (recommended ≥ 2× database size)
 
-### Tùy chọn (cho deployment)
+### Optional (for deployment)
 
-- **Docker & Docker Compose**: Cho containerized deployment
-- **Systemd**: Cho production deployment trên Linux
+- **Docker & Docker Compose**: For containerized deployment
+- **Systemd**: For production deployment on Linux
 
-## 🚀 Cài đặt
+## 🚀 Installation
 
-### Cài đặt với Python Virtual Environment (Development)
+### Install with Python Virtual Environment (Development)
 
-#### Bước 1: Clone repository
+#### Step 1: Clone the repository
 
 ```bash
 git clone https://github.com/xdev-asia-labs/x-postgres-backup.git
 cd x-postgres-backup
 ```
 
-#### Bước 2: Tạo và kích hoạt Virtual Environment
+#### Step 2: Create and activate a virtual environment
 
 ```bash
-# Tạo virtual environment
+# Create virtual environment
 python3 -m venv venv
 
-# Kích hoạt virtual environment
+# Activate virtual environment
 # Linux/macOS:
 source venv/bin/activate
 
@@ -84,211 +247,189 @@ source venv/bin/activate
 # venv\Scripts\activate
 ```
 
-#### Bước 3: Cài đặt dependencies
+#### Step 3: Install dependencies
 
 ```bash
-# Nâng cấp pip
+# Upgrade pip
 pip install --upgrade pip
 
-# Cài đặt các package cần thiết
+# Install required packages
 pip install -r requirements.txt
 ```
 
-#### Bước 4: Tạo file cấu hình
+#### Step 4: Create configuration files
 
 ```bash
-# Copy file mẫu
+# Copy example config
 cp .env.example .env
 
-# Tạo thư mục data cho SQLite
+# Create data directory for SQLite
 mkdir -p data
 
-# Tạo thư mục backup (tùy chỉnh theo nhu cầu)
+# Create backup directory (customize as needed)
 mkdir -p /var/backups/postgresql
 ```
 
-#### Bước 5: Cấu hình kết nối
+#### Step 5: Configure connections
 
-Mở file `.env` và cập nhật các thông tin sau:
+Open `.env` and update the following settings:
 
 ```bash
-# Kết nối Patroni
+# Patroni connection
 PATRONI_NODES=10.10.10.11:8008,10.10.10.12:8008,10.10.10.13:8008
 
-# Thông tin PostgreSQL
+# PostgreSQL connection
 PG_PORT=5432
 PG_USER=postgres
 PG_PASSWORD=your_postgres_password
-PG_BIN_DIR=/usr/lib/postgresql/16/bin  # Đường dẫn đến PostgreSQL binaries
+PG_BIN_DIR=/usr/lib/postgresql/16/bin  # Path to PostgreSQL binaries
 
-# Replication user cho pg_basebackup
+# Replication user for pg_basebackup
 PG_REPLICATION_USER=replicator
 PG_REPLICATION_PASSWORD=your_replicator_password
 
-# Thư mục backup
+# Backup directory
 BACKUP_DIR=/var/backups/postgresql
 ```
 
-#### Bước 6: Khởi động ứng dụng
+#### Step 6: Start the application
 
 ```bash
-# Development mode với auto-reload
+# Development mode with auto-reload
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Production mode
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-#### Bước 7: Truy cập Dashboard
+#### Step 7: Access the dashboard
 
-Mở trình duyệt và truy cập:
+Open your browser and navigate to:
 
 ```
 http://localhost:8000
 ```
 
-### Cài đặt với Docker Compose (Production)
-
-### Cài đặt với Docker Compose (Production)
+### Install with Docker Compose (Production)
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/xdev-asia-labs/x-postgres-backup.git
 cd x-postgres-backup
 
-# 2. Cấu hình
+# 2. Configure
 cp .env.example .env
-nano .env  # Chỉnh sửa cấu hình
+nano .env  # Edit configuration
 
-# 3. Khởi động container
+# 3. Start container
 docker compose up -d
 
-# 4. Kiểm tra logs
+# 4. Check logs
 docker compose logs -f
 
-# 5. Truy cập dashboard
+# 5. Access dashboard
 open http://localhost:8000
 ```
 
-## ⚙️ Cấu hình
+## ⚙️ Configuration
 
-### Cấu hình cơ bản
+All configuration is done via environment variables in the `.env` file.
 
-Tất cả cấu hình được thực hiện qua environment variables trong file `.env`.
+### Application Settings
 
-#### Cấu hình Application
-
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `APP_NAME` | x-postgres-backup | Tên ứng dụng |
-| `APP_HOST` | 0.0.0.0 | Địa chỉ listen |
-| `APP_PORT` | 8000 | Port listen |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APP_NAME` | x-postgres-backup | Application name |
+| `APP_HOST` | 0.0.0.0 | Listen address |
+| `APP_PORT` | 8000 | Listen port |
 | `APP_LOG_LEVEL` | info | Log level (debug, info, warning, error) |
-| `APP_SECRET_KEY` | change-me | Secret key cho session (phải thay đổi) |
+| `APP_SECRET_KEY` | *(auto-generated)* | Secret key for sessions (must change in production) |
 
-#### Cấu hình Cluster
+### Cluster Settings
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `PATRONI_NODES` | 10.10.10.11:8008 | Danh sách Patroni REST API endpoints (ngăn cách bởi dấu phẩy) |
-| `PATRONI_AUTH_ENABLED` | false | Bật xác thực cho Patroni API |
-| `PATRONI_AUTH_USERNAME` | | Username cho Patroni API |
-| `PATRONI_AUTH_PASSWORD` | | Password cho Patroni API |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PATRONI_NODES` | 10.10.10.11:8008 | Comma-separated Patroni REST API endpoints |
+| `PATRONI_AUTH_ENABLED` | false | Enable authentication for Patroni API |
+| `PATRONI_AUTH_USERNAME` | | Patroni API username |
+| `PATRONI_AUTH_PASSWORD` | | Patroni API password |
 
-#### Cấu hình PostgreSQL
+### PostgreSQL Settings
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `PG_PORT` | 5432 | PostgreSQL port |
 | `PG_USER` | postgres | PostgreSQL superuser |
 | `PG_PASSWORD` | | PostgreSQL password |
-| `PG_BIN_DIR` | /usr/lib/postgresql/18/bin | Đường dẫn đến PostgreSQL binaries |
-| `PG_REPLICATION_USER` | replicator | User để chạy pg_basebackup |
-| `PG_REPLICATION_PASSWORD` | | Password của replication user |
+| `PG_BIN_DIR` | /usr/lib/postgresql/18/bin | Path to PostgreSQL binaries |
+| `PG_REPLICATION_USER` | replicator | User for pg_basebackup |
+| `PG_REPLICATION_PASSWORD` | | Replication user password |
 
-#### Cấu hình Backup
+### Backup Settings
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `BACKUP_DIR` | /var/backups/postgresql | Thư mục lưu backup |
-| `BACKUP_RETENTION_DAYS` | 7 | Số ngày giữ backup |
-| `BACKUP_RETENTION_COPIES` | 7 | Số lượng backup tối thiểu giữ lại |
-| `BACKUP_COMPRESSION` | gzip | Phương thức nén (gzip, lz4, zstd) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BACKUP_DIR` | /var/backups/postgresql | Backup storage directory |
+| `BACKUP_RETENTION_DAYS` | 7 | Number of days to retain backups |
+| `BACKUP_RETENTION_COPIES` | 7 | Minimum number of backup copies to keep |
+| `BACKUP_COMPRESSION` | gzip | Compression method (gzip, lz4, zstd) |
 
-#### Cấu hình Scheduler (Cron)
+### Scheduler Settings (Cron)
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `SCHEDULE_BASEBACKUP` | 0 2 ** * | Lịch chạy pg_basebackup (2:00 AM mỗi ngày) |
-| `SCHEDULE_PGDUMP` | 0 3 ** * | Lịch chạy pg_dump (3:00 AM mỗi ngày) |
-| `SCHEDULE_VERIFY` | 0 4 ** * | Lịch verify backup (4:00 AM mỗi ngày) |
-| `SCHEDULE_CLEANUP` | 0 6 ** * | Lịch cleanup backup cũ (6:00 AM mỗi ngày) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SCHEDULE_BASEBACKUP` | 0 2 * * * | pg_basebackup schedule (daily at 2:00 AM) |
+| `SCHEDULE_PGDUMP` | 0 3 * * * | pg_dump schedule (daily at 3:00 AM) |
+| `SCHEDULE_VERIFY` | 0 4 * * * | Backup verification schedule (daily at 4:00 AM) |
+| `SCHEDULE_CLEANUP` | 0 6 * * * | Old backup cleanup schedule (daily at 6:00 AM) |
 
-**Định dạng Cron**: `minute hour day month day_of_week`
+**Cron format**: `minute hour day month day_of_week`
 
-Ví dụ:
+Examples:
 
-- `0 2 * * *` - 2:00 AM mỗi ngày
-- `0 */6 * * *` - Mỗi 6 giờ
-- `0 0 * * 0` - 12:00 AM mỗi Chủ nhật
-- `30 3 * * 1-5` - 3:30 AM từ thứ 2 đến thứ 6
+- `0 2 * * *` — 2:00 AM every day
+- `0 */6 * * *` — Every 6 hours
+- `0 0 * * 0` — 12:00 AM every Sunday
+- `30 3 * * 1-5` — 3:30 AM Monday through Friday
 
-### Cấu hình Thông báo (Notifications)
+### Notification Settings
 
-#### Telegram Notifications
+#### Telegram
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `TELEGRAM_ENABLED` | false | Bật/tắt thông báo Telegram |
-| `TELEGRAM_BOT_TOKEN` | | Token của Telegram Bot |
-| `TELEGRAM_CHAT_ID` | | Chat ID nhận thông báo |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TELEGRAM_ENABLED` | false | Enable/disable Telegram notifications |
+| `TELEGRAM_BOT_TOKEN` | | Telegram Bot token |
+| `TELEGRAM_CHAT_ID` | | Chat ID for notifications |
 
-##### Hướng dẫn tạo Telegram Bot
+##### How to create a Telegram Bot
 
-1. **Tạo bot mới**:
-   - Mở Telegram và tìm [@BotFather](https://t.me/BotFather)
-   - Gửi lệnh `/newbot`
-   - Đặt tên và username cho bot
-   - Lưu lại **Bot Token** nhận được
-
-2. **Lấy Chat ID**:
-   - Tìm và nhắn tin cho bot vừa tạo
-   - Truy cập URL: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
-   - Tìm giá trị `"chat":{"id":123456789}` trong JSON response
-   - Lưu lại **Chat ID**
-
-3. **Cập nhật `.env`**:
-
+1. **Create a new bot**: Open Telegram and find [@BotFather](https://t.me/BotFather). Send `/newbot`, set a name and username, and save the **Bot Token**.
+2. **Get your Chat ID**: Send a message to your bot, then visit `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates` and find `"chat":{"id":123456789}`.
+3. **Update `.env`**:
    ```bash
    TELEGRAM_ENABLED=true
    TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
    TELEGRAM_CHAT_ID=123456789
    ```
 
-#### Email Notifications
+#### Email
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `EMAIL_ENABLED` | false | Bật/tắt thông báo Email |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMAIL_ENABLED` | false | Enable/disable email notifications |
 | `EMAIL_SMTP_HOST` | smtp.gmail.com | SMTP server hostname |
 | `EMAIL_SMTP_PORT` | 587 | SMTP server port |
 | `EMAIL_SMTP_USER` | | SMTP username/email |
-| `EMAIL_SMTP_PASSWORD` | | SMTP password (App Password cho Gmail) |
-| `EMAIL_FROM` | | Email người gửi |
-| `EMAIL_TO` | | Danh sách email nhận (ngăn cách bởi dấu phẩy) |
-| `EMAIL_USE_TLS` | true | Sử dụng TLS/STARTTLS |
+| `EMAIL_SMTP_PASSWORD` | | SMTP password (App Password for Gmail) |
+| `EMAIL_FROM` | | Sender email address |
+| `EMAIL_TO` | | Comma-separated recipient email addresses |
+| `EMAIL_USE_TLS` | true | Use TLS/STARTTLS |
 
-##### Hướng dẫn cấu hình Gmail
+##### Gmail setup
 
-1. **Tạo App Password**:
-   - Truy cập [Google Account Security](https://myaccount.google.com/security)
-   - Bật **2-Step Verification** (nếu chưa bật)
-   - Truy cập [App Passwords](https://myaccount.google.com/apppasswords)
-   - Chọn "Mail" và thiết bị của bạn
-   - Lưu lại mật khẩu 16 ký tự (ví dụ: `xxxx xxxx xxxx xxxx`)
-
-2. **Cập nhật `.env`**:
-
+1. **Create an App Password**: Go to [Google Account Security](https://myaccount.google.com/security), enable **2-Step Verification**, then go to [App Passwords](https://myaccount.google.com/apppasswords) and generate a 16-character password.
+2. **Update `.env`**:
    ```bash
    EMAIL_ENABLED=true
    EMAIL_SMTP_HOST=smtp.gmail.com
@@ -300,10 +441,9 @@ Ví dụ:
    EMAIL_USE_TLS=true
    ```
 
-##### Cấu hình SMTP Server khác
+##### Other SMTP providers
 
 **Office 365 / Outlook:**
-
 ```bash
 EMAIL_SMTP_HOST=smtp.office365.com
 EMAIL_SMTP_PORT=587
@@ -311,119 +451,80 @@ EMAIL_USE_TLS=true
 ```
 
 **Yahoo Mail:**
-
 ```bash
 EMAIL_SMTP_HOST=smtp.mail.yahoo.com
 EMAIL_SMTP_PORT=587
 EMAIL_USE_TLS=true
 ```
 
-**Custom SMTP:**
+### Authentication & Authorization
+
+#### Enable/Disable Authentication
 
 ```bash
-EMAIL_SMTP_HOST=mail.yourdomain.com
-EMAIL_SMTP_PORT=587
-EMAIL_USE_TLS=true
-```
-
-### Cấu hình Authentication & Authorization
-
-#### Bật/Tắt Authentication
-
-```bash
-# Bật authentication (mặc định)
+# Enable authentication (default)
 AUTH_ENABLED=true
 
-# Tắt authentication (không yêu cầu login - chỉ dùng cho development)
+# Disable authentication (no login required — development only)
 AUTH_ENABLED=false
 ```
 
 #### JWT & Session Settings
 
-| Variable | Mặc định | Mô tả |
-|----------|----------|-------|
-| `JWT_SECRET_KEY` | change-me | Secret key cho JWT tokens (PHẢI thay đổi trong production) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JWT_SECRET_KEY` | *(auto-generated)* | Secret key for JWT tokens (MUST change in production) |
 | `JWT_ALGORITHM` | HS256 | JWT signing algorithm |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | 1440 | Thời gian hết hạn access token (24 giờ) |
-| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | 30 | Thời gian hết hạn refresh token (30 ngày) |
-| `SESSION_SECRET_KEY` | change-me | Secret key cho session cookie |
-| `SESSION_COOKIE_NAME` | xpb_session | Tên session cookie |
-| `SESSION_MAX_AGE` | 86400 | Thời gian sống của session (24 giờ) |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | 1440 | Access token expiry (24 hours) |
+| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | 30 | Refresh token expiry (30 days) |
+| `SESSION_SECRET_KEY` | *(auto-generated)* | Secret key for session cookie |
+| `SESSION_COOKIE_NAME` | xpb_session | Session cookie name |
+| `SESSION_MAX_AGE` | 86400 | Session lifetime in seconds (24 hours) |
 
 #### Default Admin Account
 
-Khi khởi động lần đầu, hệ thống tự động tạo một admin account:
+On first startup, the system automatically creates an admin account:
 
 ```bash
 DEFAULT_ADMIN_EMAIL=admin@example.com
 DEFAULT_ADMIN_PASSWORD=admin123
 ```
 
-**⚠️ QUAN TRỌNG**: Thay đổi password ngay sau khi đăng nhập lần đầu!
+> ⚠️ **IMPORTANT**: Change the password immediately after the first login!
 
-#### User Management Settings
+#### Single Sign-On (SSO) — Google
 
-```bash
-# Cho phép user tự đăng ký tài khoản
-ALLOW_REGISTRATION=true
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Credentials** → **Create OAuth 2.0 Client ID**
+2. Add Authorized redirect URIs: `http://localhost:8000/auth/google/callback` (dev) or `https://yourdomain.com/auth/google/callback` (production)
+3. Update `.env`:
+   ```bash
+   GOOGLE_CLIENT_ID=123456789-abc123xyz.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=GOCSPX-abc123xyz789
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   ```
 
-# Yêu cầu xác thực email (chưa implement)
-REQUIRE_EMAIL_VERIFICATION=false
-```
+#### Single Sign-On (SSO) — Microsoft
 
-#### Single Sign-On (SSO) - Google
+1. Go to [Azure Portal](https://portal.azure.com/) → **Azure Active Directory** → **App registrations** → **New registration**
+2. Add Redirect URI: `http://localhost:8000/auth/microsoft/callback`
+3. Under **Certificates & secrets**, create a new client secret
+4. Update `.env`:
+   ```bash
+   MICROSOFT_CLIENT_ID=12345678-1234-1234-1234-123456789abc
+   MICROSOFT_CLIENT_SECRET=abc123~xyz789.def456
+   MICROSOFT_TENANT_ID=common
+   MICROSOFT_REDIRECT_URI=http://localhost:8000/auth/microsoft/callback
+   ```
 
-1. **Tạo OAuth 2.0 credentials:**
-   - Truy cập [Google Cloud Console](https://console.cloud.google.com/)
-   - Tạo project mới hoặc chọn project có sẵn
-   - Vào **APIs & Services** > **Credentials**
-   - Click **Create Credentials** > **OAuth 2.0 Client ID**
-   - Chọn **Web application**
-   - Thêm Authorized redirect URIs:
-     - Development: `http://localhost:8000/auth/google/callback`
-     - Production: `https://yourdomain.com/auth/google/callback`
-   - Lưu **Client ID** và **Client Secret**
-
-2. **Cấu hình `.env`:**
-
-```bash
-GOOGLE_CLIENT_ID=123456789-abc123xyz.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-abc123xyz789
-GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
-```
-
-#### Single Sign-On (SSO) - Microsoft
-
-1. **Đăng ký app trên Azure:**
-   - Truy cập [Azure Portal](https://portal.azure.com/)
-   - Vào **Azure Active Directory** > **App registrations**
-   - Click **New registration**
-   - Nhập tên app và chọn account type
-   - Thêm Redirect URI (Web):
-     - Development: `http://localhost:8000/auth/microsoft/callback`
-     - Production: `https://yourdomain.com/auth/microsoft/callback`
-   - Sau khi tạo, vào **Certificates & secrets** > **New client secret**
-   - Lưu **Application (client) ID**, **Directory (tenant) ID**, và **Client Secret**
-
-2. **Cấu hình `.env`:**
-
-```bash
-MICROSOFT_CLIENT_ID=12345678-1234-1234-1234-123456789abc
-MICROSOFT_CLIENT_SECRET=abc123~xyz789.def456
-MICROSOFT_TENANT_ID=common
-MICROSOFT_REDIRECT_URI=http://localhost:8000/auth/microsoft/callback
-```
-
-**Tenant ID:**
-
-- `common` - Cho phép tất cả Microsoft accounts (personal + organizational)
-- `organizations` - Chỉ organizational accounts
-- `consumers` - Chỉ personal Microsoft accounts
-- `{tenant-id}` - Chỉ một organization cụ thể
+**Tenant ID options:**
+- `common` — All Microsoft accounts (personal + organizational)
+- `organizations` — Organizational accounts only
+- `consumers` — Personal Microsoft accounts only
+- `{tenant-id}` — A specific organization only
 
 #### API Authentication
 
-**Với Bearer Token (JWT):**
+**Using Bearer Token (JWT):**
 
 ```bash
 # Get access token
@@ -431,87 +532,63 @@ curl -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"admin123"}'
 
-# Response:
-# {
-#   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-#   "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-#   "token_type": "bearer"
-# }
-
 # Use token in API requests
 curl http://localhost:8000/api/backups \
   -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc..."
-```
 
-**Refresh Token:**
-
-```bash
+# Refresh token
 curl -X POST http://localhost:8000/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{"refresh_token":"eyJ0eXAiOiJKV1QiLCJhbGc..."}'
 ```
 
-## 📖 Sử dụng
+## 📖 Usage
 
-### Đăng nhập
+### Login
 
-1. **Truy cập trang login**: `http://localhost:8000/login`
-
-2. **Đăng nhập với tài khoản mặc định**:
-   - Email: `admin@example.com`
-   - Password: `admin123`
-
-3. **SSO Login**:
-   - Click **Google** hoặc **Microsoft** button
-   - Đăng nhập với tài khoản SSO
-   - Tự động tạo user mới nếu chưa tồn tại
-
-4. **Đăng ký tài khoản mới** (nếu `ALLOW_REGISTRATION=true`):
-   - Click **Sign up** link
-   - Nhập email, password, tên đầy đủ
-   - Click **Create Account**
+1. Navigate to `http://localhost:8000/login`
+2. Sign in with the default credentials: `admin@example.com` / `admin123`
+3. Alternatively, use **Google** or **Microsoft** SSO buttons
+4. If registration is enabled (`ALLOW_REGISTRATION=true`), click **Sign up** to create a new account
 
 ### Dashboard Overview
 
-Sau khi đăng nhập, truy cập dashboard chính:
+After logging in, the main dashboard displays:
+- **Cluster Status**: Shows node states (Leader, Replica, lag)
+- **Recent Backups**: Latest backup records with status
+- **Disk Usage**: Storage consumption monitoring
+- **Quick Actions**: One-click backup shortcuts
 
-- **Cluster Status**: Hiển thị trạng thái các node (Leader, Replica, lag)
-- **Recent Backups**: Danh sách backup gần đây với trạng thái
-- **Disk Usage**: Theo dõi dung lượng backup đã sử dụng
-- **Quick Actions**: Chạy backup/restore nhanh
+### Backup Management
 
-### Quản lý Backup
+#### Run a manual backup
 
-#### Chạy Backup thủ công
-
-1. Truy cập tab **Backups**
-2. Chọn loại backup:
+1. Navigate to the **Backups** tab
+2. Choose backup type:
    - **Base Backup** (`pg_basebackup`): Full physical backup
-   - **Logical Backup** (`pg_dump`): Logical backup theo database
-3. Chọn database (nếu chạy pg_dump)
+   - **Logical Backup** (`pg_dump`): Per-database logical backup
+3. Select a database (for pg_dump)
 4. Click **Run Backup**
 
-#### Xem lịch sử Backup
+#### View backup history
 
-- Tab **Backups** hiển thị tất cả backup đã chạy
-- Thông tin: Thời gian, kích thước, trạng thái, thời gian chạy
-- Lọc theo loại backup, database, trạng thái
+The **Backups** tab displays all past backups with timestamp, size, status, and duration. Filter by backup type, database, or status.
 
 ### Restore Database
 
-#### Restore từ pg_dump
+#### Restore from pg_dump
 
-1. Truy cập tab **Restore**
-2. Chọn file backup từ danh sách
-3. Nhập tên database đích
-4. Chọn các tùy chọn:
-   - **Drop existing**: Xóa database cũ trước khi restore
-   - **Target host**: Node để restore (mặc định: Leader)
+1. Navigate to the **Restore** tab
+2. Select a dump file from the list
+3. Enter the target database name
+4. Choose options:
+   - **Drop existing**: Drop old database before restore
+   - **Target host**: Node to restore to (default: Leader)
 5. Click **Start Restore**
 
-#### Restore từ pg_basebackup
+#### Restore from pg_basebackup
 
-Base backup dùng để restore toàn bộ cluster, cần thực hiện manual trên server:
+Base backups restore the entire cluster and must be performed manually on the server:
 
 ```bash
 # Stop PostgreSQL
@@ -529,105 +606,89 @@ chown -R postgres:postgres /var/lib/postgresql/16/main
 systemctl start postgresql
 ```
 
-### Cấu hình Job Scheduler
+### Job Scheduler
 
-1. Truy cập tab **Jobs**
-2. Xem danh sách scheduled jobs hiện tại
-3. Chỉnh sửa cron expression để thay đổi lịch
-4. Tắt job bằng cách bỏ tick "Enabled"
-5. Chạy thủ công job bất kỳ với nút **Run Now**
-
-### Xem Job History
-
-Tab **Jobs** > **History** hiển thị:
-
-- Lịch sử chạy tất cả jobs
-- Trạng thái (success/failed)
-- Thời gian bắt đầu/kết thúc
-- Log details
+1. Navigate to the **Jobs** tab
+2. View and edit scheduled jobs with their cron expressions
+3. Toggle jobs on/off with the enable switch
+4. Run any job immediately with the **Run Now** button
 
 ## 🔌 API Endpoints
 
-Hệ thống cung cấp REST API cho tích hợp và automation.
-
 ### Web UI Routes
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/` | GET | Dashboard tổng quan |
-| `/login` | GET | Trang login |
-| `/backups` | GET | Trang quản lý backup |
-| `/restore` | GET | Trang quản lý restore |
-| `/jobs` | GET | Trang quản lý job scheduler |
-| `/settings` | GET | Trang cấu hình |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Dashboard overview |
+| `/login` | GET | Login page |
+| `/backups` | GET | Backup management page |
+| `/restore` | GET | Restore management page |
+| `/jobs` | GET | Job scheduler page |
+| `/settings` | GET | Configuration page |
+| `/set-language/{lang}` | GET | Switch UI language (en, vi, zh, ja) |
 
 ### Authentication APIs
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/auth/register` | POST | Đăng ký tài khoản mới |
-| `/auth/login` | POST | Đăng nhập với email/password |
-| `/auth/logout` | POST | Đăng xuất |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/register` | POST | Register a new account |
+| `/auth/login` | POST | Sign in with email/password |
+| `/auth/logout` | POST | Sign out |
 | `/auth/refresh` | POST | Refresh access token |
-| `/auth/me` | GET | Thông tin user hiện tại |
-| `/auth/google/login` | GET | Đăng nhập với Google SSO |
+| `/auth/me` | GET | Current user info |
+| `/auth/google/login` | GET | Google SSO login |
 | `/auth/google/callback` | GET | Google OAuth callback |
-| `/auth/microsoft/login` | GET | Đăng nhập với Microsoft SSO |
+| `/auth/microsoft/login` | GET | Microsoft SSO login |
 | `/auth/microsoft/callback` | GET | Microsoft OAuth callback |
-| `/auth/users` | GET | Danh sách users (admin only) |
-| `/auth/users/{id}` | DELETE | Xóa user (admin only) |
+| `/auth/users` | GET | List users (admin only) |
+| `/auth/users/{id}` | DELETE | Delete user (admin only) |
 
 ### Cluster APIs
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/api/cluster/status` | GET | Trạng thái cluster từ Patroni |
-| `/api/cluster/databases` | GET | Danh sách databases |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/cluster/status` | GET | Cluster status from Patroni |
+| `/api/cluster/databases` | GET | List databases |
 
 ### Backup APIs
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/api/backups` | GET | Danh sách backup records |
-| `/api/backups/run` | POST | Chạy backup mới |
-| `/api/backups/disk` | GET | Danh sách backup trên disk |
-| `/api/verify` | GET | Verify tất cả backup |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/backups` | GET | List backup records |
+| `/api/backups/run` | POST | Run a new backup |
+| `/api/backups/disk` | GET | List on-disk backups |
+| `/api/verify` | GET | Verify all backups |
 
-**Example - Chạy pg_dump:**
+**Example — Run pg_dump:**
 
 ```bash
 curl -X POST http://localhost:8000/api/backups/run \
   -H "Content-Type: application/json" \
-  -d '{
-    "backup_type": "pgdump",
-    "database": "mydb"
-  }'
+  -d '{"backup_type": "pgdump", "database": "mydb"}'
 ```
 
-**Example - Chạy pg_basebackup:**
+**Example — Run pg_basebackup:**
 
 ```bash
 curl -X POST http://localhost:8000/api/backups/run \
   -H "Content-Type: application/json" \
-  -d '{
-    "backup_type": "basebackup"
-  }'
+  -d '{"backup_type": "basebackup"}'
 ```
 
 ### Restore APIs
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/api/restore/available` | GET | Danh sách backup có thể restore |
-| `/api/restore/run` | POST | Chạy restore operation |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/restore/available` | GET | List restorable backups |
+| `/api/restore/run` | POST | Run a restore operation |
 
-**Example - Restore database:**
+**Example — Restore database:**
 
 ```bash
 curl -X POST http://localhost:8000/api/restore/run \
   -H "Content-Type: application/json" \
   -d '{
-    "dump_file": "/var/backups/postgresql/pg_dump/2024-01-15_030000/mydb_backup_2024-01-15_030000.dump",
+    "dump_file": "/var/backups/postgresql/pg_dump/2024-01-15_030000/mydb_backup.dump",
     "target_database": "mydb_restored",
     "drop_existing": false
   }'
@@ -635,53 +696,34 @@ curl -X POST http://localhost:8000/api/restore/run \
 
 ### Job APIs
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/api/jobs/schedules` | GET | Danh sách job schedules |
-| `/api/jobs/schedules/{id}` | PUT | Cập nhật job schedule |
-| `/api/jobs/run/{name}` | POST | Chạy job thủ công |
-| `/api/jobs/history` | GET | Lịch sử chạy jobs |
-
-**Example - Chạy cleanup job:**
-
-```bash
-curl -X POST http://localhost:8000/api/jobs/run/cleanup
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/jobs/schedules` | GET | List job schedules |
+| `/api/jobs/schedules/{id}` | PUT | Update a job schedule |
+| `/api/jobs/run/{name}` | POST | Run a job manually |
+| `/api/jobs/history` | GET | Job execution history |
 
 ### Disk APIs
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/api/disk` | GET | Thông tin disk usage |
-| `/api/cleanup` | POST | Xóa backup cũ theo retention policy |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/disk` | GET | Disk usage information |
+| `/api/cleanup` | POST | Remove old backups per retention policy |
 
 ## 🚢 Deployment
 
-### Ansible Deployment (Khuyến nghị cho Production)
+### Ansible Deployment (Recommended for Production)
 
-Ansible role được cung cấp trong `deploy/ansible/` để tự động hóa deployment.
-
-#### Bước 1: Copy role vào Ansible project
+An Ansible role is provided in `deploy/ansible/` for automated deployment.
 
 ```bash
+# Copy role to your Ansible project
 cp -r deploy/ansible/ /path/to/your/ansible/roles/x-postgres-backup/
 ```
 
-#### Bước 2: Tạo inventory
+Example playbook:
 
 ```yaml
-# inventory/production.yml
-backup_servers:
-  hosts:
-    backup01:
-      ansible_host: 10.10.10.50
-      ansible_user: root
-```
-
-#### Bước 3: Tạo playbook
-
-```yaml
-# playbooks/deploy-backup.yml
 ---
 - name: Deploy x-postgres-backup
   hosts: backup_servers
@@ -699,62 +741,41 @@ backup_servers:
         telegram_chat_id: "{{ vault_telegram_chat_id }}"
 ```
 
-#### Bước 4: Chạy deployment
-
 ```bash
 ansible-playbook -i inventory/production.yml playbooks/deploy-backup.yml
 ```
 
 ### Systemd Service (Linux Production)
 
-#### Bước 1: Tạo systemd service file
-
 ```bash
+# Copy service file
 sudo cp deploy/systemd/x-postgres-backup.service /etc/systemd/system/
-sudo nano /etc/systemd/system/x-postgres-backup.service
-```
 
-#### Bước 2: Reload và start service
-
-```bash
-# Reload systemd daemon
+# Reload, enable, and start
 sudo systemctl daemon-reload
-
-# Enable service để tự khởi động
 sudo systemctl enable x-postgres-backup
-
-# Start service
 sudo systemctl start x-postgres-backup
 
-# Kiểm tra status
+# Check status
 sudo systemctl status x-postgres-backup
 
-# Xem logs
+# View logs
 sudo journalctl -u x-postgres-backup -f
 ```
 
-### Docker Deployment
-
-#### Docker Compose (Đơn giản nhất)
+### Docker Compose
 
 ```bash
-# Clone và cấu hình
 git clone https://github.com/xdev-asia-labs/x-postgres-backup.git
 cd x-postgres-backup
 cp .env.example .env
 nano .env
 
-# Start containers
 docker compose up -d
-
-# Xem logs
 docker compose logs -f
-
-# Stop containers
-docker compose down
 ```
 
-#### Docker Standalone
+### Docker Standalone
 
 ```bash
 # Build image
@@ -769,126 +790,46 @@ docker run -d \
   --env-file .env \
   x-postgres-backup:latest
 
-# Xem logs
 docker logs -f x-postgres-backup
 ```
 
-## 🏗️ Architecture
-
-### Tech Stack
-
-- **Backend**: Python 3.11+ / FastAPI
-- **Frontend**: Jinja2 + HTMX + Tailwind CSS (CDN)
-- **Scheduler**: APScheduler (cron-like scheduling)
-- **Database**: SQLite (local state tracking)
-- **HTTP Client**: httpx (async Patroni API calls)
-- **Notifications**: aiosmtplib (Email), httpx (Telegram)
-
-### Project Structure
-
-```
-x-postgres-backup/
-├── app/
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Environment configuration loader
-│   ├── database.py          # SQLAlchemy setup + session management
-│   ├── models.py            # Database models (BackupRecord, JobHistory, JobSchedule)
-│   ├── scheduler.py         # APScheduler integration + job definitions
-│   │
-│   ├── routers/
-│   │   ├── api.py           # REST API endpoints
-│   │   └── dashboard.py     # HTML dashboard routes (SSR)
-│   │
-│   ├── services/
-│   │   ├── backup.py        # pg_basebackup + pg_dump operations
-│   │   ├── restore.py       # pg_restore operations
-│   │   ├── cluster.py       # Patroni REST API client
-│   │   ├── verify.py        # Backup integrity verification
-│   │   └── notification.py  # Telegram & Email notification service
-│   │
-│   ├── static/
-│   │   └── css/
-│   │       └── style.css    # Custom CSS (extends Tailwind)
-│   │
-│   └── templates/           # Jinja2 HTML templates
-│       ├── base.html        # Base template layout
-│       ├── dashboard.html   # Dashboard overview
-│       ├── backups.html     # Backup management
-│       ├── restore.html     # Restore management
-│       ├── jobs.html        # Job scheduler
-│       └── settings.html    # Settings page
-│
-├── deploy/
-│   ├── ansible/             # Ansible role cho automated deployment
-│   │   ├── defaults/
-│   │   │   └── main.yml      # Default variables
-│   │   ├── handlers/
-│   │   │   └── main.yml      # Service handlers
-│   │   ├── tasks/
-│   │   │   └── main.yml      # Deployment tasks
-│   │   └── templates/
-│   │       ├── env.j2        # .env template
-│   │       └── x-postgres-backup.service.j2  # Systemd service
-│   │
-│   └── systemd/
-│       └── x-postgres-backup.service  # Systemd unit file
-│
-├── data/                    # SQLite database directory (created at runtime)
-├── Dockerfile               # Docker image definition
-├── docker-compose.yml       # Docker Compose configuration
-├── requirements.txt         # Python dependencies
-├── .env.example             # Environment variables template
-├── .gitignore
-├── LICENSE
-└── README.md
-```
-
-## � CI/CD & Release
+## 🔄 CI/CD & Release
 
 ### GitHub Actions Workflows
 
-Project sử dụng 3 workflow tự động:
-
-| Workflow | Trigger | Chức năng |
-|----------|---------|----------|
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
 | **CI** | Push/PR → `main` | Lint (Ruff), test, build Docker image |
-| **Build & Push** | Push → `main`, tag `v*` | Build multi-arch (amd64/arm64) và push lên Docker Hub + GHCR |
-| **Release** | Push → `main` | Semantic versioning tự động, tạo GitHub Release, push release image |
+| **Build & Push** | Push → `main`, tag `v*` | Build multi-arch (amd64/arm64) and push to Docker Hub + GHCR |
+| **Release** | Push → `main` | Automatic semantic versioning, GitHub Release, push release image |
 
 ### Semantic Versioning
 
-Version được tạo tự động dựa trên [Conventional Commits](https://www.conventionalcommits.org/):
+Versions are created automatically based on [Conventional Commits](https://www.conventionalcommits.org/):
 
-| Commit prefix | Release type | Ví dụ |
-|---------------|-------------|-------|
+| Commit prefix | Release type | Example |
+|---------------|-------------|---------|
 | `feat:` | Minor (0.**1**.0) | `feat: add SSO login` |
 | `fix:` | Patch (0.0.**1**) | `fix: bcrypt compatibility` |
 | `perf:` | Patch | `perf: optimize backup query` |
-| `feat!:` hoặc `BREAKING CHANGE:` | Major (**1**.0.0) | `feat!: new API schema` |
+| `feat!:` or `BREAKING CHANGE:` | Major (**1**.0.0) | `feat!: new API schema` |
 
-Các commit `docs:`, `style:`, `chore:`, `ci:`, `test:` **không** tạo release mới.
+Commits with `docs:`, `style:`, `chore:`, `ci:`, `test:` do **not** trigger a new release.
 
-### Cấu hình Secrets
+### Secrets Configuration
 
-Thêm vào **Settings → Secrets and variables → Actions** của GitHub repo:
+Add to **Settings → Secrets and variables → Actions** in the GitHub repository:
 
-**Secrets:**
+| Secret/Variable | Type | Description |
+|-----------------|------|-------------|
+| `DOCKERHUB_TOKEN` | Secret | Docker Hub Access Token |
+| `DOCKERHUB_USERNAME` | Variable | Docker Hub username |
 
-| Secret | Mô tả |
-|--------|--------|
-| `DOCKERHUB_TOKEN` | Docker Hub Access Token |
-
-**Variables:**
-
-| Variable | Mô tả |
-|----------|--------|
-| `DOCKERHUB_USERNAME` | Docker Hub username |
-
-> `GITHUB_TOKEN` được cung cấp tự động bởi GitHub Actions, không cần cấu hình.
+> `GITHUB_TOKEN` is automatically provided by GitHub Actions — no configuration needed.
 
 ### Docker Images
 
-Sau khi push lên `main`, image sẽ được publish tại:
+After pushing to `main`, images are published at:
 
 ```bash
 # Docker Hub
@@ -900,233 +841,174 @@ docker pull ghcr.io/xdev-asia-labs/x-postgres-backup:latest
 docker pull ghcr.io/xdev-asia-labs/x-postgres-backup:1.2.3
 ```
 
-### Quy trình Release
+## 🌐 Internationalization (i18n)
 
-```
-git commit -m "feat: add backup encryption"   →  v1.1.0 (minor)
-git commit -m "fix: restore timeout issue"     →  v1.1.1 (patch)
-git commit -m "feat!: new REST API v2"          →  v2.0.0 (major)
-git commit -m "docs: update README"             →  no release
-```
+The web dashboard supports **4 languages**:
 
-## �🐛 Troubleshooting
+| Code | Language |
+|------|----------|
+| `en` | English (default) |
+| `vi` | Tiếng Việt (Vietnamese) |
+| `zh` | 中文 (Chinese Simplified) |
+| `ja` | 日本語 (Japanese) |
 
-### Server không khởi động được
+### How it works
 
-**Lỗi: `ModuleNotFoundError: No module named 'app'`**
+- Language preference is stored in a cookie (`xpb_lang`) that persists for 1 year
+- Switch languages using the **🌐 Language** dropdown in the navigation bar or on the login page
+- All UI text is loaded from JSON translation files in `app/locales/`
+- The default language is English
+
+### Adding a new language
+
+1. Create a new JSON file in `app/locales/` (e.g., `ko.json` for Korean)
+2. Copy the structure from `en.json` and translate all values
+3. Add the language code to `SUPPORTED_LANGUAGES` and `LANGUAGE_NAMES` in `app/i18n.py`
+
+## 🐛 Troubleshooting
+
+### Server won't start
+
+**Error: `ModuleNotFoundError: No module named 'app'`**
 
 ```bash
-# Đảm bảo bạn đang ở thư mục root của project
+# Make sure you're in the project root directory
 cd /path/to/x-postgres-backup
 
-# Và virtual environment đã được activate
+# And the virtual environment is activated
 source venv/bin/activate
 ```
 
-**Lỗi: `Permission denied` khi tạo backup**
+**Error: `Permission denied` when creating backups**
 
 ```bash
-# Kiểm tra quyền truy cập thư mục backup
+# Check backup directory permissions
 ls -la /var/backups/postgresql
 
-# Cấp quyền cho user đang chạy service
+# Grant permissions to the service user
 sudo chown -R $USER:$USER /var/backups/postgresql
 sudo chmod -R 755 /var/backups/postgresql
 ```
 
-### Không kết nối được với Patroni
+### Cannot connect to Patroni
 
-**Lỗi: `No cluster leader found`**
+**Error: `No cluster leader found`**
 
-1. Kiểm tra Patroni nodes có đang chạy:
-
+1. Check that Patroni nodes are running:
    ```bash
    curl http://10.10.10.11:8008/patroni
    ```
-
-2. Kiểm tra cấu hình `PATRONI_NODES` trong `.env`:
-
-   ```bash
-   PATRONI_NODES=10.10.10.11:8008,10.10.10.12:8008,10.10.10.13:8008
-   ```
-
-3. Nếu Patroni có authentication, bật và cấu hình:
-
+2. Verify `PATRONI_NODES` in `.env`
+3. If Patroni uses authentication, enable it:
    ```bash
    PATRONI_AUTH_ENABLED=true
    PATRONI_AUTH_USERNAME=your_username
    PATRONI_AUTH_PASSWORD=your_password
    ```
 
-### pg_basebackup thất bại
+### pg_basebackup fails
 
-**Lỗi: `FATAL: no pg_hba.conf entry for replication`**
+**Error: `FATAL: no pg_hba.conf entry for replication`**
 
-Cần thêm entry trong `pg_hba.conf` của PostgreSQL:
-
-```bash
-# Thêm vào pg_hba.conf
-host    replication    replicator    <backup_server_ip>/32    md5
-
-# Reload PostgreSQL
-sudo systemctl reload postgresql
+Add a replication entry in `pg_hba.conf`:
 ```
+host    replication    replicator    <backup_server_ip>/32    md5
+```
+Then reload: `sudo systemctl reload postgresql`
 
-**Lỗi: `pg_basebackup: command not found`**
+**Error: `pg_basebackup: command not found`**
 
 ```bash
-# Kiểm tra PostgreSQL client tools đã được cài:
-which pg_basebackup
-
-# Nếu chưa có, cài đặt:
+# Install PostgreSQL client tools:
 # Ubuntu/Debian:
 sudo apt install postgresql-client-16
-
 # RHEL/CentOS:
 sudo yum install postgresql16
 
-# Cập nhật PG_BIN_DIR trong .env
-PG_BIN_DIR=/usr/bin  # hoặc đường dẫn chính xác
+# Update PG_BIN_DIR in .env
+PG_BIN_DIR=/usr/bin
 ```
 
-### Notification không hoạt động
+### Notifications not working
 
-**Telegram không nhận được thông báo:**
+**Telegram not receiving alerts:**
+```bash
+# Verify bot token
+curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe"
 
-1. Kiểm tra bot token và chat ID:
+# Test sending a message
+curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage" \
+  -d "chat_id=<YOUR_CHAT_ID>&text=Test message"
+```
 
-   ```bash
-   curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe"
-   ```
+**Email not sending:**
+1. Test SMTP connection: `telnet smtp.gmail.com 587`
+2. For Gmail: ensure 2-Step Verification is enabled and you're using an App Password
+3. Check logs: `docker compose logs -f | grep -i "email\|smtp"`
 
-2. Test gửi message:
-
-   ```bash
-   curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage" \
-     -d "chat_id=<YOUR_CHAT_ID>&text=Test message"
-   ```
-
-**Email không gửi được:**
-
-1. Test SMTP connection:
-
-   ```bash
-   telnet smtp.gmail.com 587
-   ```
-
-2. Với Gmail, đảm bảo:
-   - Đã bật 2-Step Verification
-   - Sử dụng App Password (không phải mật khẩu Gmail thường)
-   - Allow less secure apps (nếu cần)
-
-3. Kiểm tra logs:
-
-   ```bash
-   # Docker
-   docker compose logs -f | grep -i "email\|smtp"
-   
-   # Systemd
-   sudo journalctl -u x-postgres-backup -f | grep -i "email\|smtp"
-   ```
-
-### Database SQLite bị lock
-
-**Lỗi: `database is locked`**
+### SQLite database locked
 
 ```bash
-# Stop service
 sudo systemctl stop x-postgres-backup
-
-# Xóa lock file
 rm -f data/backup_manager.db-wal data/backup_manager.db-shm
-
-# Start service
 sudo systemctl start x-postgres-backup
 ```
 
-### Disk đầy do backup
+### Disk full from backups
 
 ```bash
-# Kiểm tra disk usage
+# Check disk usage
 df -h /var/backups/postgresql
 
-# Chạy cleanup thủ công
+# Run cleanup manually
 curl -X POST http://localhost:8000/api/cleanup
 
-# Hoặc xóa backup cũ thủ công
+# Or delete old backups manually
 find /var/backups/postgresql -type f -mtime +7 -delete
 ```
 
 ## 📊 Monitoring & Logs
 
-### Xem Logs
+### Viewing Logs
 
 **Development (venv):**
-
 ```bash
-# Logs hiển thị trực tiếp trên terminal
-# hoặc redirect vào file
 uvicorn app.main:app --log-config logging.yaml > logs/app.log 2>&1
 ```
 
 **Docker:**
-
 ```bash
-# Real-time logs
 docker compose logs -f
-
-# Logs của một service cụ thể
 docker compose logs -f x-postgres-backup
-
-# Lọc logs
 docker compose logs | grep -i "error\|backup"
 ```
 
 **Systemd:**
-
 ```bash
-# Real-time logs
 sudo journalctl -u x-postgres-backup -f
-
-# Logs từ thời điểm cụ thể
 sudo journalctl -u x-postgres-backup --since "2024-01-15 10:00:00"
-
-# Lọc theo mức độ
 sudo journalctl -u x-postgres-backup -p err
 ```
 
-### Metrics & Monitoring
+### Integration with Monitoring Tools
 
-Kết hợp với monitoring tools:
-
-**Prometheus:**
-
-- Expose metrics endpoint (có thể mở rộng)
-- Scrape từ `/metrics`
-
-**Grafana:**
-
-- Import dashboard template
-- Visualize backup trends, success rate, duration
-
-**Nagios/Icinga:**
-
-- Check API endpoint health
-- Alert on backup failures
+- **Prometheus**: Expose metrics endpoint at `/metrics` (extensible)
+- **Grafana**: Import dashboard templates to visualize backup trends, success rates, and duration
+- **Nagios/Icinga**: Check API endpoint health and alert on backup failures
 
 ## 🤝 Contributing
 
-Contributions are welcome! Vui lòng:
+Contributions are welcome! Please:
 
-1. Fork repository
-2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Mở Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'feat: add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📝 License
 
-MIT License - xem file [LICENSE](LICENSE) để biết chi tiết.
+MIT License — see the [LICENSE](LICENSE) file for details.
 
 ## 🔗 Links
 
@@ -1137,10 +1019,10 @@ MIT License - xem file [LICENSE](LICENSE) để biết chi tiết.
 
 ## ✨ Acknowledgments
 
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
-- [HTMX](https://htmx.org/) - High power tools for HTML
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [Patroni](https://github.com/patroni/patroni) - PostgreSQL HA solution
+- [FastAPI](https://fastapi.tiangolo.com/) — Modern web framework
+- [HTMX](https://htmx.org/) — High power tools for HTML
+- [Tailwind CSS](https://tailwindcss.com/) — Utility-first CSS framework
+- [Patroni](https://github.com/patroni/patroni) — PostgreSQL HA solution
 
 ---
 

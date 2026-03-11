@@ -23,9 +23,18 @@ LABEL org.opencontainers.image.title="x-postgres-backup" \
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    gnupg2 curl ca-certificates && \
+    echo "deb http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
     postgresql-client-16 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    postgresql-client-17 \
+    postgresql-client-18 \
+    && apt-get purge -y --auto-remove gnupg2 && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
 

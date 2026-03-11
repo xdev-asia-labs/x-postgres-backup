@@ -39,7 +39,11 @@ class Settings:
     PG_PORT: int = int(os.getenv("PG_PORT", "5432"))
     PG_USER: str = os.getenv("PG_USER", "postgres")
     PG_PASSWORD: str = os.getenv("PG_PASSWORD", "")
-    PG_BIN_DIR: str = os.getenv("PG_BIN_DIR", "/usr/lib/postgresql/18/bin")
+    PG_VERSION: str = os.getenv("PG_VERSION", "18")
+    PG_BIN_DIR: str = os.getenv(
+        "PG_BIN_DIR",
+        f"/usr/lib/postgresql/{os.getenv('PG_VERSION', '18')}/bin",
+    )
 
     # Replication
     PG_REPLICATION_USER: str = os.getenv("PG_REPLICATION_USER", "replicator")

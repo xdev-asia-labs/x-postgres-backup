@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}{{ _('nav.dashboard') }}{% endblock %}
 
 {% block content %}
 <!-- Cluster Status -->
 <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900 mb-4">Cluster Overview</h1>
+    <h1 class="text-2xl font-bold text-gray-900 mb-4">{{ _('dashboard.title') }}</h1>
 
     {% if cluster %}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -33,7 +33,7 @@
     </div>
     {% else %}
     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-        <p class="text-yellow-700">Unable to connect to cluster. Check Patroni nodes configuration.</p>
+        <p class="text-yellow-700">{{ _('dashboard.cluster_error') }}</p>
     </div>
     {% endif %}
 </div>
@@ -42,7 +42,7 @@
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
     <!-- Disk Usage -->
     <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-sm font-medium text-gray-500">Disk Usage</p>
+        <p class="text-sm font-medium text-gray-500">{{ _('dashboard.disk_usage') }}</p>
         <p class="text-2xl font-bold text-gray-900">{{ disk.percent }}%</p>
         <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div class="{% if disk.percent > 90 %}bg-red-600{% elif disk.percent > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-2 rounded-full" style="width: {{ disk.percent }}%"></div>
@@ -52,29 +52,29 @@
 
     <!-- Total Backups -->
     <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-sm font-medium text-gray-500">Total Backups</p>
+        <p class="text-sm font-medium text-gray-500">{{ _('dashboard.total_backups') }}</p>
         <p class="text-2xl font-bold text-gray-900">{{ recent_backups | length }}</p>
-        <p class="text-xs text-gray-400 mt-1">Recent records</p>
+        <p class="text-xs text-gray-400 mt-1">{{ _('dashboard.recent_records') }}</p>
     </div>
 
     <!-- Scheduled Jobs -->
     <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-sm font-medium text-gray-500">Active Schedules</p>
+        <p class="text-sm font-medium text-gray-500">{{ _('dashboard.active_schedules') }}</p>
         <p class="text-2xl font-bold text-gray-900">{{ schedules | selectattr('is_enabled') | list | length }}</p>
-        <p class="text-xs text-gray-400 mt-1">of {{ schedules | length }} total</p>
+        <p class="text-xs text-gray-400 mt-1">{{ _('dashboard.of_total').replace('{0}', schedules | length | string) }}</p>
     </div>
 
     <!-- Quick Actions -->
     <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-sm font-medium text-gray-500 mb-2">Quick Actions</p>
+        <p class="text-sm font-medium text-gray-500 mb-2">{{ _('dashboard.quick_actions') }}</p>
         <div class="space-y-2">
             <button hx-post="/api/backups/run" hx-vals='{"backup_type": "basebackup"}' hx-headers='{"Content-Type": "application/json"}'
                     class="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded">
-                &#9654; Run Basebackup
+                &#9654; {{ _('dashboard.run_basebackup') }}
             </button>
             <button hx-post="/api/backups/run" hx-vals='{"backup_type": "pgdump"}' hx-headers='{"Content-Type": "application/json"}'
                     class="w-full text-left text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded">
-                &#9654; Run pg_dump
+                &#9654; {{ _('dashboard.run_pgdump') }}
             </button>
         </div>
     </div>
@@ -83,18 +83,18 @@
 <!-- Recent Backups Table -->
 <div class="bg-white rounded-lg shadow mb-6">
     <div class="px-4 py-3 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Backups</h2>
+        <h2 class="text-lg font-semibold text-gray-900">{{ _('dashboard.recent_backups') }}</h2>
     </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Database</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.type') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.database') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.size') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.duration') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.started') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -117,7 +117,7 @@
                 </tr>
                 {% endfor %}
                 {% if not recent_backups %}
-                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No backups recorded yet</td></tr>
+                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">{{ _('dashboard.no_backups') }}</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -127,16 +127,16 @@
 <!-- Recent Job History -->
 <div class="bg-white rounded-lg shadow">
     <div class="px-4 py-3 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Job Runs</h2>
+        <h2 class="text-lg font-semibold text-gray-900">{{ _('dashboard.recent_job_runs') }}</h2>
     </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Finished</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.job') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.started') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.finished') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -153,7 +153,7 @@
                 </tr>
                 {% endfor %}
                 {% if not recent_jobs %}
-                <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No jobs have run yet</td></tr>
+                <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">{{ _('dashboard.no_jobs') }}</td></tr>
                 {% endif %}
             </tbody>
         </table>

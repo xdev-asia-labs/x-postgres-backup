@@ -1,25 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Jobs{% endblock %}
+{% block title %}{{ _('nav.jobs') }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-gray-900 mb-6">Job Schedules & History</h1>
+<h1 class="text-2xl font-bold text-gray-900 mb-6">{{ _('jobs.title') }}</h1>
 
 <!-- Schedules -->
 <div class="bg-white rounded-lg shadow mb-6">
     <div class="px-4 py-3 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Scheduled Jobs</h2>
+        <h2 class="text-lg font-semibold text-gray-900">{{ _('jobs.scheduled_jobs') }}</h2>
     </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Schedule (cron)</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enabled</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Run</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.job') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.schedule_cron') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.enabled') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.last_run') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.last_status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.description') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.actions') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -33,11 +33,11 @@
                         <button hx-put="/api/jobs/schedules/{{ s.id }}" hx-vals='{"is_enabled": {{ "false" if s.is_enabled else "true" }}}' hx-headers='{"Content-Type": "application/json"}'
                                 hx-swap="none"
                                 class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 {% if s.is_enabled %}bg-blue-600{% else %}bg-gray-200{% endif %}">
-                            <span class="sr-only">Toggle</span>
+                            <span class="sr-only">{{ _('common.toggle') }}</span>
                             <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 {% if s.is_enabled %}translate-x-5{% else %}translate-x-0{% endif %}"></span>
                         </button>
                     </td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ s.last_run_at.strftime('%m-%d %H:%M') if s.last_run_at else 'Never' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ s.last_run_at.strftime('%m-%d %H:%M') if s.last_run_at else _('jobs.never') }}</td>
                     <td class="px-4 py-3 text-sm">
                         {% if s.last_run_status %}
                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {% if s.last_run_status == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
@@ -49,8 +49,8 @@
                     <td class="px-4 py-3 text-sm">
                         <button hx-post="/api/jobs/run/{{ s.job_name }}" hx-swap="none"
                                 class="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                onclick="return confirm('Run {{ s.job_name }} now?')">
-                            Run Now
+                                onclick="return confirm('{{ _('jobs.run_confirm').replace('{0}', s.job_name) }}')">
+                            {{ _('jobs.run_now') }}
                         </button>
                     </td>
                 </tr>
@@ -63,19 +63,19 @@
 <!-- Job History -->
 <div class="bg-white rounded-lg shadow">
     <div class="px-4 py-3 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Job History</h2>
+        <h2 class="text-lg font-semibold text-gray-900">{{ _('jobs.job_history') }}</h2>
     </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Finished</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Output</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.id') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.job') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.type') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.started') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.finished') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('common.output') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -95,7 +95,7 @@
                 </tr>
                 {% endfor %}
                 {% if not history %}
-                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No job history</td></tr>
+                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">{{ _('jobs.no_history') }}</td></tr>
                 {% endif %}
             </tbody>
         </table>

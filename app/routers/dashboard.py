@@ -13,12 +13,22 @@ from app.services import restore as restore_svc
 router = APIRouter(tags=["dashboard"])
 
 
+def _ctx(request: Request, **kwargs) -> dict:
+    """Build template context with i18n support."""
+    return {
+        "request": request,
+        "_": request.state._,
+        "lang": request.state.lang,
+        **kwargs,
+    }
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Login page."""
     return request.app.state.templates.TemplateResponse(
         "login.html",
-        {"request": request},
+        _ctx(request),
     )
 
 
@@ -46,15 +56,15 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 
     return request.app.state.templates.TemplateResponse(
         "dashboard.html",
-        {
-            "request": request,
-            "cluster": cluster,
-            "recent_backups": recent_backups,
-            "recent_jobs": recent_jobs,
-            "disk": disk,
-            "schedules": schedules,
-            "page": "dashboard",
-        },
+        _ctx(
+            request,
+            cluster=cluster,
+            recent_backups=recent_backups,
+            recent_jobs=recent_jobs,
+            disk=disk,
+            schedules=schedules,
+            page="dashboard",
+        ),
     )
 
 
@@ -74,13 +84,13 @@ async def backups_page(request: Request, db: Session = Depends(get_db)):
 
     return request.app.state.templates.TemplateResponse(
         "backups.html",
-        {
-            "request": request,
-            "records": records,
-            "on_disk": on_disk,
-            "disk": disk,
-            "page": "backups",
-        },
+        _ctx(
+            request,
+            records=records,
+            on_disk=on_disk,
+            disk=disk,
+            page="backups",
+        ),
     )
 
 
@@ -96,13 +106,13 @@ async def restore_page(request: Request):
 
     return request.app.state.templates.TemplateResponse(
         "restore.html",
-        {
-            "request": request,
-            "dumps": dumps,
-            "basebackups": basebackups,
-            "databases": databases,
-            "page": "restore",
-        },
+        _ctx(
+            request,
+            dumps=dumps,
+            basebackups=basebackups,
+            databases=databases,
+            page="restore",
+        ),
     )
 
 
@@ -117,12 +127,12 @@ def jobs_page(request: Request, db: Session = Depends(get_db)):
     )
     return request.app.state.templates.TemplateResponse(
         "jobs.html",
-        {
-            "request": request,
-            "schedules": schedules,
-            "history": history,
-            "page": "jobs",
-        },
+        _ctx(
+            request,
+            schedules=schedules,
+            history=history,
+            page="jobs",
+        ),
     )
 
 
@@ -135,11 +145,11 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
 
     return request.app.state.templates.TemplateResponse(
         "settings.html",
-        {
-            "request": request,
-            "settings": app_settings,
-            "schedules": schedules,
-            "disk": disk,
-            "page": "settings",
-        },
+        _ctx(
+            request,
+            settings=app_settings,
+            schedules=schedules,
+            disk=disk,
+            page="settings",
+        ),
     )
