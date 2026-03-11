@@ -59,6 +59,11 @@ A comprehensive backup and restore management system for PostgreSQL High Availab
 
 ### System Workflow
 
+![System Workflow](docs/system_workflow.png)
+
+<details>
+<summary>📐 Mermaid Source</summary>
+
 ```mermaid
 graph TB
     subgraph "PostgreSQL HA Cluster"
@@ -108,7 +113,14 @@ graph TB
     SCHED --> DB
 ```
 
+</details>
+
 ### Backup & Restore Workflow
+
+![Backup & Restore Workflow](docs/backup_restore_workflow.png)
+
+<details>
+<summary>📐 Mermaid Source</summary>
 
 ```mermaid
 sequenceDiagram
@@ -139,6 +151,8 @@ sequenceDiagram
     API-->>Web: Return status
     Web-->>User: Show result
 ```
+
+</details>
 
 ### Tech Stack
 
