@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.1.0...v1.2.0) (2026-03-11)
+
+### 🚀 Features
+
+* Add CI/CD pipeline, automated tests, and development setup ([fd4d276](https://github.com/xdev-asia-labs/x-postgres-backup/commit/fd4d2767d241eea2313bce5c36926c327478e49f))
+
 ## [1.1.0](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.0.2...v1.1.0) (2026-03-11)
 
 ### 🚀 Features
