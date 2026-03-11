@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.0.1...v1.0.2) (2026-03-11)
+
+### 🐛 Bug Fixes
+
+* resolve remaining lint errors and Docker build failure ([bcb4297](https://github.com/xdev-asia-labs/x-postgres-backup/commit/bcb4297bc24a3f5aacf4642a57442bfdc1d2f1a5))
+
 ## [1.0.1](https://github.com/xdev-asia-labs/x-postgres-backup/compare/v1.0.0...v1.0.1) (2026-03-11)
 
 ### 🐛 Bug Fixes
