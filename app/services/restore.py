@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import BackupRecord
 from app.services.cluster import get_cluster_status
+from app.services.notification import notify_restore_status
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,17 @@ async def restore_pgdump(
 
     db.commit()
     db.refresh(record)
+
+    # Send notification
+    await notify_restore_status(
+        status=record.status,
+        database_name=target_database,
+        target_host=target_host,
+        file_path=dump_file,
+        duration=record.duration_seconds,
+        error=record.error_message,
+    )
+
     return record
 
 

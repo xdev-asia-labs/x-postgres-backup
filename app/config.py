@@ -1,8 +1,21 @@
 import os
+import secrets
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _generate_secret(env_var: str) -> str:
+    """Return env value or generate a random secret for development."""
+    value = os.getenv(env_var, "")
+    if not value:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"{env_var} not set! Using auto-generated secret. Set it in .env for production."
+        )
+        return secrets.token_urlsafe(32)
+    return value
 
 
 class Settings:
@@ -11,7 +24,7 @@ class Settings:
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
     APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
     APP_LOG_LEVEL: str = os.getenv("APP_LOG_LEVEL", "info")
-    APP_SECRET_KEY: str = os.getenv("APP_SECRET_KEY", "change-me")
+    APP_SECRET_KEY: str = _generate_secret("APP_SECRET_KEY")
 
     # Patroni
     PATRONI_NODES: list[str] = [
@@ -46,6 +59,54 @@ class Settings:
 
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///data/backup_manager.db")
+
+    # Telegram Notifications
+    TELEGRAM_ENABLED: bool = os.getenv("TELEGRAM_ENABLED", "false").lower() == "true"
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+
+    # Email Notifications
+    EMAIL_ENABLED: bool = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
+    EMAIL_SMTP_HOST: str = os.getenv("EMAIL_SMTP_HOST", "smtp.gmail.com")
+    EMAIL_SMTP_PORT: int = int(os.getenv("EMAIL_SMTP_PORT", "587"))
+    EMAIL_SMTP_USER: str = os.getenv("EMAIL_SMTP_USER", "")
+    EMAIL_SMTP_PASSWORD: str = os.getenv("EMAIL_SMTP_PASSWORD", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "")
+    EMAIL_TO: list[str] = [
+        e.strip()
+        for e in os.getenv("EMAIL_TO", "").split(",")
+        if e.strip()
+    ]
+    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+
+    # Authentication & Authorization
+    AUTH_ENABLED: bool = os.getenv("AUTH_ENABLED", "true").lower() == "true"
+    JWT_SECRET_KEY: str = _generate_secret("JWT_SECRET_KEY")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+    
+    # Session
+    SESSION_SECRET_KEY: str = _generate_secret("SESSION_SECRET_KEY")
+    SESSION_COOKIE_NAME: str = os.getenv("SESSION_COOKIE_NAME", "xpb_session")
+    SESSION_MAX_AGE: int = int(os.getenv("SESSION_MAX_AGE", "86400"))  # 24 hours
+
+    # OAuth2 - Google SSO
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+
+    # OAuth2 - Microsoft SSO
+    MICROSOFT_CLIENT_ID: str = os.getenv("MICROSOFT_CLIENT_ID", "")
+    MICROSOFT_CLIENT_SECRET: str = os.getenv("MICROSOFT_CLIENT_SECRET", "")
+    MICROSOFT_TENANT_ID: str = os.getenv("MICROSOFT_TENANT_ID", "common")
+    MICROSOFT_REDIRECT_URI: str = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:8000/auth/microsoft/callback")
+
+    # User Management
+    ALLOW_REGISTRATION: bool = os.getenv("ALLOW_REGISTRATION", "true").lower() == "true"
+    DEFAULT_ADMIN_EMAIL: str = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@example.com")
+    DEFAULT_ADMIN_PASSWORD: str = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")
+    REQUIRE_EMAIL_VERIFICATION: bool = os.getenv("REQUIRE_EMAIL_VERIFICATION", "false").lower() == "true"
 
     @property
     def basebackup_dir(self) -> str:

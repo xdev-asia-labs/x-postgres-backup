@@ -9,9 +9,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings
-from app.database import init_db
-from app.routers import api, dashboard
+from app.database import get_db, init_db
+from app.routers import api, auth, dashboard
 from app.scheduler import start_scheduler, stop_scheduler
+from app.services.auth import ensure_default_admin
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -26,6 +27,14 @@ BASE_DIR = Path(__file__).resolve().parent
 async def lifespan(app: FastAPI):
     logger.info("Starting %s...", settings.APP_NAME)
     init_db()
+    
+    # Create default admin user if not exists
+    db = next(get_db())
+    try:
+        ensure_default_admin(db)
+    finally:
+        db.close()
+    
     start_scheduler()
     yield
     stop_scheduler()
@@ -46,6 +55,7 @@ static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Routers
+app.include_router(auth.router)
 app.include_router(api.router)
 app.include_router(dashboard.router)
 

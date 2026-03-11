@@ -13,6 +13,15 @@ from app.services import restore as restore_svc
 router = APIRouter(tags=["dashboard"])
 
 
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Login page."""
+    return request.app.state.templates.TemplateResponse(
+        "login.html",
+        {"request": request},
+    )
+
+
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     try:

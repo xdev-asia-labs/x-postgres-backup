@@ -1,9 +1,0 @@
----
-- name: Reload systemd
-  ansible.builtin.systemd:
-    daemon_reload: true
-
-- name: Restart x-postgres-backup
-  ansible.builtin.systemd:
-    name: x-postgres-backup
-    state: restarted

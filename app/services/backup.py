@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import BackupRecord
 from app.services.cluster import get_cluster_status
+from app.services.notification import notify_backup_status
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,16 @@ async def run_basebackup(db: Session) -> BackupRecord:
 
     db.commit()
     db.refresh(record)
+
+    # Send notification
+    await notify_backup_status(
+        backup_type="basebackup",
+        status=record.status,
+        source_host=record.source_host,
+        size=_format_size(record.size_bytes) if record.size_bytes else None,
+        duration=record.duration_seconds,
+        error=record.error_message,
+    )
     return record
 
 
@@ -175,6 +186,18 @@ async def run_pgdump(db: Session, database: str | None = None) -> list[BackupRec
 
         db.commit()
         db.refresh(record)
+
+        # Send notification for each database backup
+        await notify_backup_status(
+            backup_type="pgdump",
+            status=record.status,
+            database_name=record.database_name,
+            source_host=record.source_host,
+            size=_format_size(record.size_bytes) if record.size_bytes else None,
+            duration=record.duration_seconds,
+            error=record.error_message,
+        )
+
         records.append(record)
 
     return records
