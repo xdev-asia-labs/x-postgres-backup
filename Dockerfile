@@ -32,7 +32,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     postgresql-client-16 \
     postgresql-client-17 \
-    postgresql-client-18 \
     && apt-get purge -y --auto-remove gnupg2 && \
     rm -rf /var/lib/apt/lists/*
 

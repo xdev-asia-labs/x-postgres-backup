@@ -347,8 +347,8 @@ async def google_callback(
                 avatar_url=user_info.get("picture"),
             )
         
-        # Create tokens and session (same as regular login)
-        access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        # Create session (same as regular login)
+        _access_token = create_access_token(data={"sub": str(user.id), "email": user.email})  # noqa: F841
         session_token = create_access_token(data={"sub": str(user.id), "type": "session"})
         session_expires = datetime.datetime.utcnow() + datetime.timedelta(
             seconds=settings.SESSION_MAX_AGE
