@@ -1,0 +1,45 @@
+services:
+  x-postgres-backup:
+    build: .
+    container_name: x-postgres-backup
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - APP_NAME=x-postgres-backup
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - APP_LOG_LEVEL=${APP_LOG_LEVEL:-info}
+      - DATABASE_URL=sqlite:///data/db/backup_manager.db
+      - PATRONI_NODES=${PATRONI_NODES:-10.10.10.11:8008,10.10.10.12:8008,10.10.10.13:8008}
+      - PATRONI_AUTH_ENABLED=${PATRONI_AUTH_ENABLED:-false}
+      - PATRONI_AUTH_USERNAME=${PATRONI_AUTH_USERNAME:-}
+      - PATRONI_AUTH_PASSWORD=${PATRONI_AUTH_PASSWORD:-}
+      - PG_PORT=${PG_PORT:-5432}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_REPLICATION_USER=${PG_REPLICATION_USER:-replicator}
+      - PG_REPLICATION_PASSWORD=${PG_REPLICATION_PASSWORD}
+      - PG_BIN_DIR=/usr/bin
+      - BACKUP_DIR=/data/backups
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - BACKUP_RETENTION_COPIES=${BACKUP_RETENTION_COPIES:-7}
+      - SCHEDULE_BASEBACKUP=${SCHEDULE_BASEBACKUP:-0 2 * * *}
+      - SCHEDULE_PGDUMP=${SCHEDULE_PGDUMP:-0 3 * * *}
+      - SCHEDULE_VERIFY=${SCHEDULE_VERIFY:-0 4 * * *}
+      - SCHEDULE_CLEANUP=${SCHEDULE_CLEANUP:-0 6 * * *}
+    volumes:
+      - backup-data:/data/backups
+      - db-data:/data/db
+    networks:
+      - pg-cluster
+
+volumes:
+  backup-data:
+    driver: local
+  db-data:
+    driver: local
+
+networks:
+  pg-cluster:
+    driver: bridge

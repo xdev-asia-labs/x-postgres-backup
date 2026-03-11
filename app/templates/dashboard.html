@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Cluster Status -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-4">Cluster Overview</h1>
+
+    {% if cluster %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {% for node in cluster.nodes %}
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 {% if node.role == 'leader' %}border-green-500{% elif node.state == 'running' %}border-blue-500{% else %}border-red-500{% endif %}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">{{ node.name }}</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ node.host }}</p>
+                </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {% if node.role == 'leader' %}bg-green-100 text-green-800{% elif node.role == 'replica' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ node.role }}
+                    </span>
+                    <p class="text-sm text-gray-500 mt-1">{{ node.state }}</p>
+                    {% if node.lag is not none and node.lag > 0 %}
+                    <p class="text-xs text-orange-600">Lag: {{ node.lag }}B</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% if node.timeline %}
+            <p class="text-xs text-gray-400 mt-2">Timeline: {{ node.timeline }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <p class="text-yellow-700">Unable to connect to cluster. Check Patroni nodes configuration.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <!-- Disk Usage -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm font-medium text-gray-500">Disk Usage</p>
+        <p class="text-2xl font-bold text-gray-900">{{ disk.percent }}%</p>
+        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div class="{% if disk.percent > 90 %}bg-red-600{% elif disk.percent > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-2 rounded-full" style="width: {{ disk.percent }}%"></div>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">{{ disk.used_human }} / {{ disk.total_human }}</p>
+    </div>
+
+    <!-- Total Backups -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm font-medium text-gray-500">Total Backups</p>
+        <p class="text-2xl font-bold text-gray-900">{{ recent_backups | length }}</p>
+        <p class="text-xs text-gray-400 mt-1">Recent records</p>
+    </div>
+
+    <!-- Scheduled Jobs -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm font-medium text-gray-500">Active Schedules</p>
+        <p class="text-2xl font-bold text-gray-900">{{ schedules | selectattr('is_enabled') | list | length }}</p>
+        <p class="text-xs text-gray-400 mt-1">of {{ schedules | length }} total</p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm font-medium text-gray-500 mb-2">Quick Actions</p>
+        <div class="space-y-2">
+            <button hx-post="/api/backups/run" hx-vals='{"backup_type": "basebackup"}' hx-headers='{"Content-Type": "application/json"}'
+                    class="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded">
+                &#9654; Run Basebackup
+            </button>
+            <button hx-post="/api/backups/run" hx-vals='{"backup_type": "pgdump"}' hx-headers='{"Content-Type": "application/json"}'
+                    class="w-full text-left text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded">
+                &#9654; Run pg_dump
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Backups Table -->
+<div class="bg-white rounded-lg shadow mb-6">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Recent Backups</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Database</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for b in recent_backups %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium {% if b.backup_type == 'basebackup' %}bg-blue-100 text-blue-700{% elif b.backup_type == 'pgdump' %}bg-purple-100 text-purple-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ b.backup_type }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900">{{ b.database_name or '-' }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {% if b.status == 'success' %}bg-green-100 text-green-700{% elif b.status == 'running' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ b.status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{% if b.size_bytes %}{{ "%.1f"|format(b.size_bytes / 1048576) }} MB{% else %}-{% endif %}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{% if b.duration_seconds %}{{ "%.1f"|format(b.duration_seconds) }}s{% else %}-{% endif %}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ b.started_at.strftime('%Y-%m-%d %H:%M') if b.started_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not recent_backups %}
+                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No backups recorded yet</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Recent Job History -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Recent Job Runs</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Finished</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for j in recent_jobs %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ j.job_name }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {% if j.status == 'success' %}bg-green-100 text-green-700{% elif j.status == 'running' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ j.status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ j.started_at.strftime('%Y-%m-%d %H:%M') if j.started_at else '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ j.finished_at.strftime('%Y-%m-%d %H:%M') if j.finished_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not recent_jobs %}
+                <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No jobs have run yet</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

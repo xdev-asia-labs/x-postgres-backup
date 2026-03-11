@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Connection Settings -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Cluster Connection</h2>
+        <dl class="space-y-3">
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">Patroni Nodes</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.PATRONI_NODES }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">PostgreSQL Port</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_PORT }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">PostgreSQL User</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_USER }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">Replication User</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_REPLICATION_USER }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">PG Bin Directory</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_BIN_DIR }}</dd>
+            </div>
+        </dl>
+    </div>
+
+    <!-- Backup Settings -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Backup Configuration</h2>
+        <dl class="space-y-3">
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">Backup Directory</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.BACKUP_DIR }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">Retention Days</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.BACKUP_RETENTION_DAYS }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">Retention Copies</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.BACKUP_RETENTION_COPIES }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">Basebackup Schedule</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.SCHEDULE_BASEBACKUP }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm text-gray-500">pg_dump Schedule</dt>
+                <dd class="text-sm font-mono text-gray-900">{{ settings.SCHEDULE_PGDUMP }}</dd>
+            </div>
+        </dl>
+    </div>
+
+    <!-- Disk Usage -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Storage</h2>
+        <div class="space-y-4">
+            <div>
+                <div class="flex justify-between mb-1">
+                    <span class="text-sm text-gray-500">Disk Usage</span>
+                    <span class="text-sm text-gray-900">{{ disk.percent }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div class="{% if disk.percent > 90 %}bg-red-600{% elif disk.percent > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full" style="width: {{ disk.percent }}%"></div>
+                </div>
+            </div>
+            <dl class="space-y-2">
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">Total</dt>
+                    <dd class="text-sm text-gray-900">{{ disk.total_human }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">Used</dt>
+                    <dd class="text-sm text-gray-900">{{ disk.used_human }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">Free</dt>
+                    <dd class="text-sm text-gray-900">{{ disk.free_human }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Schedule Management -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Schedule Configuration</h2>
+        <div class="space-y-4">
+            {% for s in schedules %}
+            <div class="border rounded-md p-3">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-900">{{ s.job_name }}</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs {% if s.is_enabled %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-500{% endif %}">
+                        {{ 'Active' if s.is_enabled else 'Disabled' }}
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="text" value="{{ s.cron_expression }}" id="cron-{{ s.id }}"
+                           class="flex-1 rounded-md border-gray-300 text-sm p-1.5 border font-mono"
+                           placeholder="* * * * *">
+                    <button onclick="updateCron({{ s.id }})"
+                            class="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500">
+                        Update
+                    </button>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">{{ s.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- App Info -->
+<div class="mt-6 bg-white rounded-lg shadow p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Application Info</h2>
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+            <dt class="text-sm text-gray-500">App Name</dt>
+            <dd class="text-sm font-medium text-gray-900">{{ settings.APP_NAME }}</dd>
+        </div>
+        <div>
+            <dt class="text-sm text-gray-500">Host</dt>
+            <dd class="text-sm font-mono text-gray-900">{{ settings.APP_HOST }}:{{ settings.APP_PORT }}</dd>
+        </div>
+        <div>
+            <dt class="text-sm text-gray-500">Database</dt>
+            <dd class="text-sm font-mono text-gray-900">{{ settings.DATABASE_URL }}</dd>
+        </div>
+        <div>
+            <dt class="text-sm text-gray-500">Debug</dt>
+            <dd class="text-sm text-gray-900">{{ 'Yes' if settings.debug else 'No' }}</dd>
+        </div>
+    </dl>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function updateCron(scheduleId) {
+    const input = document.getElementById('cron-' + scheduleId);
+    const resp = await fetch('/api/jobs/schedules/' + scheduleId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cron_expression: input.value }),
+    });
+    if (resp.ok) {
+        showToast('Schedule updated', 'success');
+    } else {
+        const data = await resp.json();
+        showToast(data.detail || 'Update failed', 'error');
+    }
+}
+</script>
+{% endblock %}

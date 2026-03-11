@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Backups{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Backup Management</h1>
+    <div class="flex space-x-2">
+        <button hx-post="/api/backups/run" hx-vals='{"backup_type": "basebackup"}' hx-headers='{"Content-Type": "application/json"}'
+                class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500">
+            <span class="htmx-indicator spinner mr-2">&#8635;</span>
+            Run Basebackup
+        </button>
+        <button hx-post="/api/backups/run" hx-vals='{"backup_type": "pgdump"}' hx-headers='{"Content-Type": "application/json"}'
+                class="inline-flex items-center rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-500">
+            <span class="htmx-indicator spinner mr-2">&#8635;</span>
+            Run pg_dump All
+        </button>
+        <button hx-post="/api/cleanup" class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                onclick="return confirm('Remove old backups beyond retention period?')">
+            Cleanup Old
+        </button>
+    </div>
+</div>
+
+<!-- Disk Usage Bar -->
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-gray-700">Disk Usage</span>
+        <span class="text-sm text-gray-500">{{ disk.used_human }} / {{ disk.total_human }} ({{ disk.percent }}%)</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-3">
+        <div class="{% if disk.percent > 90 %}bg-red-600{% elif disk.percent > 75 %}bg-yellow-500{% else %}bg-blue-600{% endif %} h-3 rounded-full transition-all" style="width: {{ disk.percent }}%"></div>
+    </div>
+    <p class="text-xs text-gray-400 mt-1">Free: {{ disk.free_human }}</p>
+</div>
+
+<!-- On-Disk Backups -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Basebackups -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-4 py-3 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Physical Backups (pg_basebackup)</h2>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% for b in on_disk.basebackups %}
+            <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">{{ b.name }}</p>
+                    <p class="text-xs text-gray-500">{{ b.created_at }} &middot; {{ b.size_human }}</p>
+                </div>
+                <button hx-get="/api/verify/{{ b.path }}" hx-target="#verify-result"
+                        class="text-xs text-blue-600 hover:text-blue-800">Verify</button>
+            </div>
+            {% endfor %}
+            {% if not on_disk.basebackups %}
+            <div class="px-4 py-8 text-center text-gray-400">No physical backups on disk</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Dumps -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-4 py-3 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Logical Backups (pg_dump)</h2>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% for d in on_disk.pgdumps %}
+            <div class="px-4 py-3 hover:bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">{{ d.name }}</p>
+                        <p class="text-xs text-gray-500">{{ d.created_at }} &middot; {{ d.size_human }} &middot; {{ d.database_count }} databases</p>
+                    </div>
+                </div>
+                {% if d.databases %}
+                <div class="mt-1 flex flex-wrap gap-1">
+                    {% for db in d.databases %}
+                    <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600">{{ db }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% if not on_disk.pgdumps %}
+            <div class="px-4 py-8 text-center text-gray-400">No logical backups on disk</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Verify Result -->
+<div id="verify-result"></div>
+
+<!-- Backup History Table -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Backup History</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Database</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Error</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for r in records %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ r.id }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium {% if r.backup_type == 'basebackup' %}bg-blue-100 text-blue-700{% elif r.backup_type == 'pgdump' %}bg-purple-100 text-purple-700{% else %}bg-orange-100 text-orange-700{% endif %}">
+                            {{ r.backup_type }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900">{{ r.database_name or '-' }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {% if r.status == 'success' %}bg-green-100 text-green-700{% elif r.status == 'running' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{% if r.size_bytes %}{{ "%.1f"|format(r.size_bytes / 1048576) }} MB{% else %}-{% endif %}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{% if r.duration_seconds %}{{ "%.1f"|format(r.duration_seconds) }}s{% else %}-{% endif %}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ r.source_host or '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ r.started_at.strftime('%m-%d %H:%M') if r.started_at else '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-red-500 max-w-xs truncate" title="{{ r.error_message or '' }}">{{ r.error_message[:50] if r.error_message else '-' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not records %}
+                <tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">No backup records</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

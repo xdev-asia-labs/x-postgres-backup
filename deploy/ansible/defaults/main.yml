@@ -1,0 +1,9 @@
+---
+app_name: x-postgres-backup
+app_user: backup-manager
+app_group: backup-manager
+app_dir: /opt/x-postgres-backup
+app_port: 8000
+app_log_level: info
+
+backup_dir: /var/backups/postgresql

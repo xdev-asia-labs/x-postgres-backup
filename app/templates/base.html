@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Backup Manager{% endblock %} - PG HA Cluster</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-block; }
+        .htmx-request.htmx-indicator { display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+    </style>
+</head>
+<body class="h-full">
+<div class="min-h-full">
+    <!-- Navigation -->
+    <nav class="bg-gray-800">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center">
+                    <div class="shrink-0">
+                        <span class="text-white text-xl font-bold">&#128024; PG Backup</span>
+                    </div>
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/" class="rounded-md px-3 py-2 text-sm font-medium {% if page == 'dashboard' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Dashboard</a>
+                        <a href="/backups" class="rounded-md px-3 py-2 text-sm font-medium {% if page == 'backups' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Backups</a>
+                        <a href="/restore" class="rounded-md px-3 py-2 text-sm font-medium {% if page == 'restore' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Restore</a>
+                        <a href="/jobs" class="rounded-md px-3 py-2 text-sm font-medium {% if page == 'jobs' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Jobs</a>
+                        <a href="/settings" class="rounded-md px-3 py-2 text-sm font-medium {% if page == 'settings' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Settings</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-gray-400 text-sm" id="clock"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page content -->
+    <main>
+        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+<!-- Toast notifications -->
+<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+<script>
+    function updateClock() {
+        document.getElementById('clock').textContent = new Date().toLocaleString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function showToast(message, type = 'info') {
+        const colors = {
+            success: 'bg-green-500', error: 'bg-red-500',
+            info: 'bg-blue-500', warning: 'bg-yellow-500'
+        };
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `${colors[type] || colors.info} text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 opacity-0`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.replace('opacity-0', 'opacity-100'));
+        setTimeout(() => {
+            toast.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.successful) {
+            showToast('Operation completed', 'success');
+        } else {
+            showToast('Operation failed', 'error');
+        }
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
