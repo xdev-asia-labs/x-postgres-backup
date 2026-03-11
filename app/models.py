@@ -15,7 +15,9 @@ class AppSetting(Base):
     value = Column(Text, nullable=False, default="")
     description = Column(String(500), nullable=True)
     category = Column(String(50), nullable=False, default="general")
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+    )
 
 
 class BackupRecord(Base):
@@ -26,7 +28,9 @@ class BackupRecord(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     backup_type = Column(String(20), nullable=False)  # basebackup, pgdump, restore
     database_name = Column(String(255), nullable=True)
-    status = Column(String(20), nullable=False, default="running")  # running, success, failed
+    status = Column(
+        String(20), nullable=False, default="running"
+    )  # running, success, failed
     file_path = Column(Text, nullable=True)
     size_bytes = Column(Integer, nullable=True)
     duration_seconds = Column(Float, nullable=True)
@@ -66,7 +70,9 @@ class JobSchedule(Base):
     last_run_at = Column(DateTime, nullable=True)
     last_run_status = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+    )
 
 
 class User(Base):
@@ -79,22 +85,24 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=True, index=True)
     hashed_password = Column(String(255), nullable=True)  # Nullable for SSO users
     full_name = Column(String(255), nullable=True)
-    
+
     # User status
     is_active = Column(Boolean, default=True, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
-    
+
     # SSO Integration
     sso_provider = Column(String(50), nullable=True)  # google, microsoft, local
     sso_user_id = Column(String(255), nullable=True)  # Provider's user ID
     avatar_url = Column(String(500), nullable=True)
-    
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+    )
     last_login_at = Column(DateTime, nullable=True)
-    
+
     # Security
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)

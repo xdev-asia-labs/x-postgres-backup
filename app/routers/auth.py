@@ -38,12 +38,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # OAuth2 configuration
-oauth_config = Config(environ={
-    "GOOGLE_CLIENT_ID": settings.GOOGLE_CLIENT_ID,
-    "GOOGLE_CLIENT_SECRET": settings.GOOGLE_CLIENT_SECRET,
-    "MICROSOFT_CLIENT_ID": settings.MICROSOFT_CLIENT_ID,
-    "MICROSOFT_CLIENT_SECRET": settings.MICROSOFT_CLIENT_SECRET,
-})
+oauth_config = Config(
+    environ={
+        "GOOGLE_CLIENT_ID": settings.GOOGLE_CLIENT_ID,
+        "GOOGLE_CLIENT_SECRET": settings.GOOGLE_CLIENT_SECRET,
+        "MICROSOFT_CLIENT_ID": settings.MICROSOFT_CLIENT_ID,
+        "MICROSOFT_CLIENT_SECRET": settings.MICROSOFT_CLIENT_SECRET,
+    }
+)
 
 oauth = OAuth(oauth_config)
 
@@ -119,7 +121,7 @@ async def create_user_by_admin(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    
+
     # Create user
     user = create_user(
         db=db,
@@ -133,7 +135,7 @@ async def create_user_by_admin(
     user.is_verified = True
     db.commit()
     db.refresh(user)
-    
+
     # Log audit
     log_audit(
         db=db,
@@ -144,7 +146,7 @@ async def create_user_by_admin(
         ip_address=get_client_ip(request),
         user_agent=get_user_agent(request),
     )
-    
+
     return user
 
 
@@ -171,23 +173,23 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is disabled",
         )
-    
+
     # Create tokens
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
-    
+
     # Store refresh token
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(
         days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
     )
     store_refresh_token(db, user.id, refresh_token, expires_at)
-    
+
     # Create session
     session_token = create_access_token(data={"sub": str(user.id), "type": "session"})
     session_expires = datetime.datetime.utcnow() + datetime.timedelta(
@@ -201,7 +203,7 @@ async def login(
         ip_address=get_client_ip(request),
         user_agent=get_user_agent(request),
     )
-    
+
     # Set session cookie
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
@@ -210,7 +212,7 @@ async def login(
         httponly=True,
         samesite="lax",
     )
-    
+
     # Log audit
     log_audit(
         db=db,
@@ -221,7 +223,7 @@ async def login(
         ip_address=get_client_ip(request),
         user_agent=get_user_agent(request),
     )
-    
+
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -236,34 +238,34 @@ async def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
-    
+
     payload = decode_token(token_data.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
-    
+
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
-    
+
     # Create new tokens
     access_token = create_access_token(data={"sub": user_id})
     new_refresh_token = create_refresh_token(data={"sub": user_id})
-    
+
     # Revoke old refresh token
     revoke_refresh_token(db, token_data.refresh_token)
-    
+
     # Store new refresh token
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(
         days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
     )
     store_refresh_token(db, int(user_id), new_refresh_token, expires_at)
-    
+
     return Token(access_token=access_token, refresh_token=new_refresh_token)
 
 
@@ -277,7 +279,7 @@ async def logout(
     """Logout current user."""
     # Clear session cookie
     response.delete_cookie(key=settings.SESSION_COOKIE_NAME)
-    
+
     # Log audit
     log_audit(
         db=db,
@@ -286,7 +288,7 @@ async def logout(
         ip_address=get_client_ip(request),
         user_agent=get_user_agent(request),
     )
-    
+
     return {"message": "Logged out successfully"}
 
 
@@ -307,7 +309,7 @@ async def google_login(request: Request):
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="Google SSO is not configured",
         )
-    
+
     redirect_uri = settings.GOOGLE_REDIRECT_URI
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -322,20 +324,20 @@ async def google_callback(
     try:
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get("userinfo")
-        
+
         if not user_info:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to get user info from Google",
             )
-        
+
         email = user_info.get("email")
         if not email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Google",
             )
-        
+
         # Get or create user
         user = get_user_by_email(db, email)
         if not user:
@@ -347,14 +349,18 @@ async def google_callback(
                 sso_user_id=user_info.get("sub"),
                 avatar_url=user_info.get("picture"),
             )
-        
+
         # Create session (same as regular login)
-        _access_token = create_access_token(data={"sub": str(user.id), "email": user.email})  # noqa: F841
-        session_token = create_access_token(data={"sub": str(user.id), "type": "session"})
+        _access_token = create_access_token(
+            data={"sub": str(user.id), "email": user.email}
+        )  # noqa: F841
+        session_token = create_access_token(
+            data={"sub": str(user.id), "type": "session"}
+        )
         session_expires = datetime.datetime.utcnow() + datetime.timedelta(
             seconds=settings.SESSION_MAX_AGE
         )
-        
+
         create_session(
             db=db,
             user_id=user.id,
@@ -363,7 +369,7 @@ async def google_callback(
             ip_address=get_client_ip(request),
             user_agent=get_user_agent(request),
         )
-        
+
         response.set_cookie(
             key=settings.SESSION_COOKIE_NAME,
             value=session_token,
@@ -371,7 +377,7 @@ async def google_callback(
             httponly=True,
             samesite="lax",
         )
-        
+
         log_audit(
             db=db,
             action="login_google_sso",
@@ -379,10 +385,10 @@ async def google_callback(
             ip_address=get_client_ip(request),
             user_agent=get_user_agent(request),
         )
-        
+
         # Redirect to dashboard
         return RedirectResponse(url="/")
-        
+
     except Exception as e:
         logger.error(f"Google OAuth error: {e}")
         raise HTTPException(
@@ -400,7 +406,7 @@ async def microsoft_login(request: Request):
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="Microsoft SSO is not configured",
         )
-    
+
     redirect_uri = settings.MICROSOFT_REDIRECT_URI
     return await oauth.microsoft.authorize_redirect(request, redirect_uri)
 
@@ -415,20 +421,20 @@ async def microsoft_callback(
     try:
         token = await oauth.microsoft.authorize_access_token(request)
         user_info = token.get("userinfo")
-        
+
         if not user_info:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to get user info from Microsoft",
             )
-        
+
         email = user_info.get("email") or user_info.get("preferred_username")
         if not email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Microsoft",
             )
-        
+
         # Get or create user
         user = get_user_by_email(db, email)
         if not user:
@@ -439,13 +445,15 @@ async def microsoft_callback(
                 sso_provider="microsoft",
                 sso_user_id=user_info.get("oid") or user_info.get("sub"),
             )
-        
+
         # Create session (same as Google)
-        session_token = create_access_token(data={"sub": str(user.id), "type": "session"})
+        session_token = create_access_token(
+            data={"sub": str(user.id), "type": "session"}
+        )
         session_expires = datetime.datetime.utcnow() + datetime.timedelta(
             seconds=settings.SESSION_MAX_AGE
         )
-        
+
         create_session(
             db=db,
             user_id=user.id,
@@ -454,7 +462,7 @@ async def microsoft_callback(
             ip_address=get_client_ip(request),
             user_agent=get_user_agent(request),
         )
-        
+
         response.set_cookie(
             key=settings.SESSION_COOKIE_NAME,
             value=session_token,
@@ -462,7 +470,7 @@ async def microsoft_callback(
             httponly=True,
             samesite="lax",
         )
-        
+
         log_audit(
             db=db,
             action="login_microsoft_sso",
@@ -470,9 +478,9 @@ async def microsoft_callback(
             ip_address=get_client_ip(request),
             user_agent=get_user_agent(request),
         )
-        
+
         return RedirectResponse(url="/")
-        
+
     except Exception as e:
         logger.error(f"Microsoft OAuth error: {e}")
         raise HTTPException(
@@ -505,8 +513,8 @@ async def delete_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     db.delete(user)
     db.commit()
-    
+
     return {"message": f"User {user.email} deleted successfully"}

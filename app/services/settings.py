@@ -6,7 +6,6 @@ notification settings at runtime through the web UI.
 """
 
 import logging
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -18,10 +17,20 @@ logger = logging.getLogger(__name__)
 # Keys that can be edited via admin UI, grouped by category.
 EDITABLE_SETTINGS: dict[str, list[dict]] = {
     "cluster": [
-        {"key": "PATRONI_NODES", "desc": "Patroni REST API endpoints (comma-separated)"},
-        {"key": "PATRONI_AUTH_ENABLED", "desc": "Enable authentication for Patroni API"},
+        {
+            "key": "PATRONI_NODES",
+            "desc": "Patroni REST API endpoints (comma-separated)",
+        },
+        {
+            "key": "PATRONI_AUTH_ENABLED",
+            "desc": "Enable authentication for Patroni API",
+        },
         {"key": "PATRONI_AUTH_USERNAME", "desc": "Patroni API username"},
-        {"key": "PATRONI_AUTH_PASSWORD", "desc": "Patroni API password", "secret": True},
+        {
+            "key": "PATRONI_AUTH_PASSWORD",
+            "desc": "Patroni API password",
+            "secret": True,
+        },
     ],
     "postgresql": [
         {"key": "PG_PORT", "desc": "PostgreSQL port"},
@@ -30,7 +39,11 @@ EDITABLE_SETTINGS: dict[str, list[dict]] = {
         {"key": "PG_VERSION", "desc": "PostgreSQL major version"},
         {"key": "PG_BIN_DIR", "desc": "Path to PostgreSQL binaries"},
         {"key": "PG_REPLICATION_USER", "desc": "User for pg_basebackup"},
-        {"key": "PG_REPLICATION_PASSWORD", "desc": "Replication password", "secret": True},
+        {
+            "key": "PG_REPLICATION_PASSWORD",
+            "desc": "Replication password",
+            "secret": True,
+        },
     ],
     "backup": [
         {"key": "BACKUP_DIR", "desc": "Backup storage directory"},
@@ -61,11 +74,22 @@ EDITABLE_SETTINGS: dict[str, list[dict]] = {
     ],
     "sso": [
         {"key": "GOOGLE_CLIENT_ID", "desc": "Google OAuth2 Client ID"},
-        {"key": "GOOGLE_CLIENT_SECRET", "desc": "Google OAuth2 Client Secret", "secret": True},
+        {
+            "key": "GOOGLE_CLIENT_SECRET",
+            "desc": "Google OAuth2 Client Secret",
+            "secret": True,
+        },
         {"key": "GOOGLE_REDIRECT_URI", "desc": "Google OAuth2 Redirect URI"},
         {"key": "MICROSOFT_CLIENT_ID", "desc": "Microsoft OAuth2 Client ID"},
-        {"key": "MICROSOFT_CLIENT_SECRET", "desc": "Microsoft OAuth2 Client Secret", "secret": True},
-        {"key": "MICROSOFT_TENANT_ID", "desc": "Microsoft Tenant ID (common for multi-tenant)"},
+        {
+            "key": "MICROSOFT_CLIENT_SECRET",
+            "desc": "Microsoft OAuth2 Client Secret",
+            "secret": True,
+        },
+        {
+            "key": "MICROSOFT_TENANT_ID",
+            "desc": "Microsoft Tenant ID (common for multi-tenant)",
+        },
         {"key": "MICROSOFT_REDIRECT_URI", "desc": "Microsoft OAuth2 Redirect URI"},
     ],
 }
@@ -110,14 +134,16 @@ def get_all_settings(db: Session) -> dict[str, dict]:
             key = item["key"]
             from_db = key in db_rows
             value = db_rows[key] if from_db else _env_default(key)
-            group.append({
-                "key": key,
-                "value": value,
-                "description": item.get("desc", ""),
-                "category": category,
-                "secret": item.get("secret", False),
-                "from_db": from_db,
-            })
+            group.append(
+                {
+                    "key": key,
+                    "value": value,
+                    "description": item.get("desc", ""),
+                    "category": category,
+                    "secret": item.get("secret", False),
+                    "from_db": from_db,
+                }
+            )
         result[category] = group
     return result
 
@@ -180,9 +206,15 @@ def _apply_to_runtime(key: str, value: str):
         setattr(env_settings, key, value.lower() == "true")
     elif key == "EMAIL_TO":
         env_settings.EMAIL_TO = [e.strip() for e in value.split(",") if e.strip()]
-    elif key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI",
-                 "MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET",
-                 "MICROSOFT_TENANT_ID", "MICROSOFT_REDIRECT_URI"):
+    elif key in (
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "MICROSOFT_CLIENT_ID",
+        "MICROSOFT_CLIENT_SECRET",
+        "MICROSOFT_TENANT_ID",
+        "MICROSOFT_REDIRECT_URI",
+    ):
         setattr(env_settings, key, value)
         _reload_oauth_provider(key)
     else:
@@ -193,9 +225,12 @@ def _reload_oauth_provider(key: str):
     """Re-register OAuth provider when SSO credentials change."""
     try:
         from app.routers.auth import oauth, oauth_config
+
         if key.startswith("GOOGLE_"):
             oauth_config.environ["GOOGLE_CLIENT_ID"] = env_settings.GOOGLE_CLIENT_ID
-            oauth_config.environ["GOOGLE_CLIENT_SECRET"] = env_settings.GOOGLE_CLIENT_SECRET
+            oauth_config.environ["GOOGLE_CLIENT_SECRET"] = (
+                env_settings.GOOGLE_CLIENT_SECRET
+            )
             if env_settings.GOOGLE_CLIENT_ID and env_settings.GOOGLE_CLIENT_SECRET:
                 oauth.register(
                     name="google",
@@ -205,9 +240,16 @@ def _reload_oauth_provider(key: str):
                 )
                 logger.info("Google OAuth provider reloaded")
         elif key.startswith("MICROSOFT_"):
-            oauth_config.environ["MICROSOFT_CLIENT_ID"] = env_settings.MICROSOFT_CLIENT_ID
-            oauth_config.environ["MICROSOFT_CLIENT_SECRET"] = env_settings.MICROSOFT_CLIENT_SECRET
-            if env_settings.MICROSOFT_CLIENT_ID and env_settings.MICROSOFT_CLIENT_SECRET:
+            oauth_config.environ["MICROSOFT_CLIENT_ID"] = (
+                env_settings.MICROSOFT_CLIENT_ID
+            )
+            oauth_config.environ["MICROSOFT_CLIENT_SECRET"] = (
+                env_settings.MICROSOFT_CLIENT_SECRET
+            )
+            if (
+                env_settings.MICROSOFT_CLIENT_ID
+                and env_settings.MICROSOFT_CLIENT_SECRET
+            ):
                 oauth.register(
                     name="microsoft",
                     server_metadata_url=f"https://login.microsoftonline.com/{env_settings.MICROSOFT_TENANT_ID}/v2.0/.well-known/openid-configuration",

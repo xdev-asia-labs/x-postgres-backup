@@ -11,6 +11,7 @@ def _generate_secret(env_var: str) -> str:
     value = os.getenv(env_var, "")
     if not value:
         import logging
+
         logging.getLogger(__name__).warning(
             f"{env_var} not set! Using auto-generated secret. Set it in .env for production."
         )
@@ -28,10 +29,11 @@ class Settings:
 
     # Patroni
     PATRONI_NODES: list[str] = [
-        n.strip()
-        for n in os.getenv("PATRONI_NODES", "10.10.10.11:8008").split(",")
+        n.strip() for n in os.getenv("PATRONI_NODES", "10.10.10.11:8008").split(",")
     ]
-    PATRONI_AUTH_ENABLED: bool = os.getenv("PATRONI_AUTH_ENABLED", "false").lower() == "true"
+    PATRONI_AUTH_ENABLED: bool = (
+        os.getenv("PATRONI_AUTH_ENABLED", "false").lower() == "true"
+    )
     PATRONI_AUTH_USERNAME: str = os.getenv("PATRONI_AUTH_USERNAME", "")
     PATRONI_AUTH_PASSWORD: str = os.getenv("PATRONI_AUTH_PASSWORD", "")
 
@@ -62,7 +64,9 @@ class Settings:
     SCHEDULE_CLEANUP: str = os.getenv("SCHEDULE_CLEANUP", "0 6 * * *")
 
     # Database (PostgreSQL)
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://xpb:xpb@localhost:5432/xpb")
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL", "postgresql://xpb:xpb@localhost:5432/xpb"
+    )
 
     # Telegram Notifications
     TELEGRAM_ENABLED: bool = os.getenv("TELEGRAM_ENABLED", "false").lower() == "true"
@@ -77,9 +81,7 @@ class Settings:
     EMAIL_SMTP_PASSWORD: str = os.getenv("EMAIL_SMTP_PASSWORD", "")
     EMAIL_FROM: str = os.getenv("EMAIL_FROM", "")
     EMAIL_TO: list[str] = [
-        e.strip()
-        for e in os.getenv("EMAIL_TO", "").split(",")
-        if e.strip()
+        e.strip() for e in os.getenv("EMAIL_TO", "").split(",") if e.strip()
     ]
     EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
 
@@ -87,9 +89,13 @@ class Settings:
     AUTH_ENABLED: bool = os.getenv("AUTH_ENABLED", "true").lower() == "true"
     JWT_SECRET_KEY: str = _generate_secret("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours
-    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
-    
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "1440")
+    )  # 24 hours
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(
+        os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30")
+    )
+
     # Session
     SESSION_SECRET_KEY: str = _generate_secret("SESSION_SECRET_KEY")
     SESSION_COOKIE_NAME: str = os.getenv("SESSION_COOKIE_NAME", "xpb_session")
@@ -98,19 +104,27 @@ class Settings:
     # OAuth2 - Google SSO
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+    GOOGLE_REDIRECT_URI: str = os.getenv(
+        "GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback"
+    )
 
     # OAuth2 - Microsoft SSO
     MICROSOFT_CLIENT_ID: str = os.getenv("MICROSOFT_CLIENT_ID", "")
     MICROSOFT_CLIENT_SECRET: str = os.getenv("MICROSOFT_CLIENT_SECRET", "")
     MICROSOFT_TENANT_ID: str = os.getenv("MICROSOFT_TENANT_ID", "common")
-    MICROSOFT_REDIRECT_URI: str = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:8000/auth/microsoft/callback")
+    MICROSOFT_REDIRECT_URI: str = os.getenv(
+        "MICROSOFT_REDIRECT_URI", "http://localhost:8000/auth/microsoft/callback"
+    )
 
     # User Management
-    ALLOW_REGISTRATION: bool = os.getenv("ALLOW_REGISTRATION", "false").lower() == "true"
+    ALLOW_REGISTRATION: bool = (
+        os.getenv("ALLOW_REGISTRATION", "false").lower() == "true"
+    )
     DEFAULT_ADMIN_EMAIL: str = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@localhost")
     DEFAULT_ADMIN_PASSWORD: str = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin")
-    REQUIRE_EMAIL_VERIFICATION: bool = os.getenv("REQUIRE_EMAIL_VERIFICATION", "false").lower() == "true"
+    REQUIRE_EMAIL_VERIFICATION: bool = (
+        os.getenv("REQUIRE_EMAIL_VERIFICATION", "false").lower() == "true"
+    )
 
     @property
     def basebackup_dir(self) -> str:

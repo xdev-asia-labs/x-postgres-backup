@@ -2,6 +2,10 @@
 
 ![x-postgres-backup banner](banner.png)
 
+[![CI](https://github.com/xdev-asia-labs/x-postgres-backup/actions/workflows/ci.yml/badge.svg)](https://github.com/xdev-asia-labs/x-postgres-backup/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
 A comprehensive backup and restore management system for PostgreSQL High Availability Clusters (Patroni) with a web dashboard, automated job scheduling, and real-time notifications.
 
 ---
@@ -30,16 +34,16 @@ A comprehensive backup and restore management system for PostgreSQL High Availab
 
 ### Key Highlights
 
-✅ **Intuitive Dashboard** — Real-time cluster monitoring, backup history, and disk usage at a glance  
-✅ **Backup Management** — Supports both `pg_basebackup` (physical) and `pg_dump` (logical) with automated scheduling  
-✅ **Restore Management** — Point-and-click restore from any backup with a visual UI  
-✅ **Job Scheduler** — Configure backup/cleanup/verify schedules through the web interface using cron expressions  
-✅ **Cluster Monitoring** — Live cluster status via the Patroni REST API  
-✅ **Backup Verification** — Automatic integrity checks for all stored backups  
-✅ **Smart Notifications** — Telegram and email alerts for backup/restore success or failure  
-✅ **Retention Management** — Automatic cleanup of old backups based on configurable retention policies  
-✅ **Multi-Language UI** — Supports English, Vietnamese, Chinese, and Japanese  
-✅ **Authentication & SSO** — JWT-based auth with Google and Microsoft SSO support  
+✅ **Intuitive Dashboard** — Real-time cluster monitoring, backup history, and disk usage at a glance
+✅ **Backup Management** — Supports both `pg_basebackup` (physical) and `pg_dump` (logical) with automated scheduling
+✅ **Restore Management** — Point-and-click restore from any backup with a visual UI
+✅ **Job Scheduler** — Configure backup/cleanup/verify schedules through the web interface using cron expressions
+✅ **Cluster Monitoring** — Live cluster status via the Patroni REST API
+✅ **Backup Verification** — Automatic integrity checks for all stored backups
+✅ **Smart Notifications** — Telegram and email alerts for backup/restore success or failure
+✅ **Retention Management** — Automatic cleanup of old backups based on configurable retention policies
+✅ **Multi-Language UI** — Supports English, Vietnamese, Chinese, and Japanese
+✅ **Authentication & SSO** — JWT-based auth with Google and Microsoft SSO support
 
 ## 🛠️ Features
 
@@ -78,7 +82,7 @@ graph TB
         API[FastAPI REST API]
         SCHED[APScheduler<br/>Job Scheduler]
         AUTH[Auth Module<br/>JWT + SSO]
-        
+
         WEB --> API
         API --> SCHED
         API --> AUTH
@@ -139,7 +143,7 @@ sequenceDiagram
     PG-->>Svc: Data stream
     Svc->>Disk: Write compressed backup
     Svc->>API: Record result in SQLite
-    
+
     alt Success
         API->>Notify: Send success alert
         Notify-->>User: 📧 Telegram / Email
@@ -147,7 +151,7 @@ sequenceDiagram
         API->>Notify: Send failure alert
         Notify-->>User: 🚨 Telegram / Email
     end
-    
+
     API-->>Web: Return status
     Web-->>User: Show result
 ```

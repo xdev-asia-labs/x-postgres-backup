@@ -33,9 +33,9 @@ async def get_current_user_optional(
             is_verified=True,
         )
         return mock_user
-    
+
     user = None
-    
+
     # Try Bearer token first
     if credentials:
         token = credentials.credentials
@@ -44,13 +44,13 @@ async def get_current_user_optional(
             user_id = payload.get("sub")
             if user_id:
                 user = get_user_by_id(db, int(user_id))
-    
+
     # Try session cookie if no bearer token
     if not user and session_cookie:
         session = get_session(db, session_cookie)
         if session:
             user = get_user_by_id(db, session.user_id)
-    
+
     return user
 
 
@@ -64,13 +64,13 @@ async def get_current_user(
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user",
         )
-    
+
     return current_user
 
 

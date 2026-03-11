@@ -131,7 +131,7 @@
     "email": "Email",
     "email_placeholder": "your@email.com",
     "password": "Password",
-    "password_placeholder": "••••••••",
+    "password_placeholder": "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
     "sign_in_btn": "Sign In",
     "or_continue_with": "Or continue with",
     "no_account": "Don't have an account?",
