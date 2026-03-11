@@ -30,8 +30,9 @@ RUN apt-get update && \
     | gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    postgresql-client-16 && \
+    postgresql-client-18 libpq-dev && \
     apt-get install -y --no-install-recommends postgresql-client-17 || true && \
+    apt-get install -y --no-install-recommends postgresql-client-16 || true && \
     apt-get purge -y --auto-remove gnupg2 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -40,12 +41,13 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY . .
 
-RUN mkdir -p /data/backups/basebackup /data/backups/pg_dump /data/backups/logs /data/db
+RUN mkdir -p /data/backups/basebackup /data/backups/pg_dump /data/backups/logs
 
 EXPOSE 8000
 
 ENV BACKUP_DIR=/data/backups \
-    DATABASE_URL=sqlite:///data/db/backup_manager.db \
+    DATABASE_URL=postgresql://xpb:xpb@postgres:5432/xpb \
+    PG_VERSION=18.3 \
     APP_VERSION=${VERSION}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

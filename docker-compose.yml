@@ -1,8 +1,29 @@
 services:
+  postgres:
+    image: postgres:18.3
+    container_name: xpb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: xpb
+      POSTGRES_USER: xpb
+      POSTGRES_PASSWORD: ${XPB_DB_PASSWORD:-xpb}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xpb -d xpb"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pg-cluster
+
   x-postgres-backup:
     build: .
     container_name: x-postgres-backup
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
@@ -10,7 +31,7 @@ services:
       - APP_HOST=0.0.0.0
       - APP_PORT=8000
       - APP_LOG_LEVEL=${APP_LOG_LEVEL:-info}
-      - DATABASE_URL=sqlite:///data/db/backup_manager.db
+      - DATABASE_URL=postgresql://xpb:${XPB_DB_PASSWORD:-xpb}@postgres:5432/xpb
       - PATRONI_NODES=${PATRONI_NODES:-10.10.10.11:8008,10.10.10.12:8008,10.10.10.13:8008}
       - PATRONI_AUTH_ENABLED=${PATRONI_AUTH_ENABLED:-false}
       - PATRONI_AUTH_USERNAME=${PATRONI_AUTH_USERNAME:-}
@@ -18,6 +39,7 @@ services:
       - PG_PORT=${PG_PORT:-5432}
       - PG_USER=${PG_USER:-postgres}
       - PG_PASSWORD=${PG_PASSWORD}
+      - PG_VERSION=18.3
       - PG_REPLICATION_USER=${PG_REPLICATION_USER:-replicator}
       - PG_REPLICATION_PASSWORD=${PG_REPLICATION_PASSWORD}
       - PG_BIN_DIR=/usr/bin
@@ -30,14 +52,13 @@ services:
       - SCHEDULE_CLEANUP=${SCHEDULE_CLEANUP:-0 6 * * *}
     volumes:
       - backup-data:/data/backups
-      - db-data:/data/db
     networks:
       - pg-cluster
 
 volumes:
   backup-data:
     driver: local
-  db-data:
+  pg-data:
     driver: local
 
 networks:

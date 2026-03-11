@@ -2,68 +2,99 @@
 {% block title %}{{ _('nav.settings') }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-gray-900 mb-6">{{ _('settings.title') }}</h1>
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">{{ _('settings.title') }}</h1>
+    {% if is_superuser %}
+    <button onclick="saveAllSettings()" id="save-all-btn"
+            class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        {{ _('settings.save_all') }}
+    </button>
+    {% endif %}
+</div>
+
+{% set category_labels = {
+    'cluster': _('settings.cluster_connection'),
+    'postgresql': _('settings.postgresql'),
+    'backup': _('settings.backup_config'),
+    'schedule': _('settings.schedule_config'),
+    'telegram': _('settings.telegram'),
+    'email': _('settings.email'),
+    'sso': _('settings.sso')
+} %}
+
+{% set category_icons = {
+    'cluster': '🖧',
+    'postgresql': '🐘',
+    'backup': '💾',
+    'schedule': '⏰',
+    'telegram': '📨',
+    'email': '✉️',
+    'sso': '🔑'
+} %}
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Connection Settings -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ _('settings.cluster_connection') }}</h2>
-        <dl class="space-y-3">
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.patroni_nodes') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.PATRONI_NODES }}</dd>
+    {% for category, items in all_settings.items() %}
+    <div class="bg-white rounded-lg shadow">
+        <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">
+                <span class="mr-2">{{ category_icons.get(category, '⚙️') }}</span>
+                {{ category_labels.get(category, category|capitalize) }}
+            </h2>
+            {% if is_superuser %}
+            <button onclick="saveCategorySettings('{{ category }}')"
+                    class="text-xs rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-200 transition">
+                {{ _('settings.save') }}
+            </button>
+            {% endif %}
+        </div>
+        <div class="px-6 py-4 space-y-4">
+            {% for item in items %}
+            <div>
+                <label for="setting-{{ item.key }}" class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-medium text-gray-700">{{ item.key }}</span>
+                    {% if item.from_db %}
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-blue-100 text-blue-700">DB</span>
+                    {% else %}
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-gray-100 text-gray-500">.env</span>
+                    {% endif %}
+                </label>
+                <p class="text-xs text-gray-400 mb-1">{{ item.description }}</p>
+                {% if is_superuser %}
+                    {% if item.secret %}
+                    <input type="password" id="setting-{{ item.key }}"
+                           data-key="{{ item.key }}" data-category="{{ category }}"
+                           value="{{ item.value }}"
+                           class="setting-input w-full rounded-md border-gray-300 text-sm p-2 border font-mono focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="••••••••"
+                           autocomplete="off">
+                    {% elif item.key in ['TELEGRAM_ENABLED', 'EMAIL_ENABLED', 'EMAIL_USE_TLS', 'PATRONI_AUTH_ENABLED'] %}
+                    <select id="setting-{{ item.key }}"
+                            data-key="{{ item.key }}" data-category="{{ category }}"
+                            class="setting-input w-full rounded-md border-gray-300 text-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
+                        <option value="true" {% if item.value|lower == 'true' %}selected{% endif %}>True</option>
+                        <option value="false" {% if item.value|lower != 'true' %}selected{% endif %}>False</option>
+                    </select>
+                    {% else %}
+                    <input type="text" id="setting-{{ item.key }}"
+                           data-key="{{ item.key }}" data-category="{{ category }}"
+                           value="{{ item.value }}"
+                           class="setting-input w-full rounded-md border-gray-300 text-sm p-2 border font-mono focus:ring-blue-500 focus:border-blue-500">
+                    {% endif %}
+                {% else %}
+                    <div class="w-full rounded-md bg-gray-50 text-sm p-2 font-mono text-gray-700 border border-gray-200">
+                        {% if item.secret %}••••••••{% else %}{{ item.value }}{% endif %}
+                    </div>
+                {% endif %}
             </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.pg_port') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_PORT }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.pg_user') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_USER }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.replication_user') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_REPLICATION_USER }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.pg_version') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_VERSION }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.pg_bin_dir') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.PG_BIN_DIR }}</dd>
-            </div>
-        </dl>
+            {% endfor %}
+        </div>
     </div>
+    {% endfor %}
+</div>
 
-    <!-- Backup Settings -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ _('settings.backup_config') }}</h2>
-        <dl class="space-y-3">
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.backup_dir') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.BACKUP_DIR }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.retention_days') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.BACKUP_RETENTION_DAYS }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.retention_copies') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.BACKUP_RETENTION_COPIES }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.basebackup_schedule') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.SCHEDULE_BASEBACKUP }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt class="text-sm text-gray-500">{{ _('settings.pgdump_schedule') }}</dt>
-                <dd class="text-sm font-mono text-gray-900">{{ settings.SCHEDULE_PGDUMP }}</dd>
-            </div>
-        </dl>
-    </div>
-
-    <!-- Disk Usage -->
+<!-- Disk Usage -->
+<div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ _('settings.storage') }}</h2>
         <div class="space-y-4">
@@ -121,32 +152,162 @@
     </div>
 </div>
 
-<!-- App Info -->
-<div class="mt-6 bg-white rounded-lg shadow p-6">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ _('settings.app_info') }}</h2>
-    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-            <dt class="text-sm text-gray-500">{{ _('settings.app_name') }}</dt>
-            <dd class="text-sm font-medium text-gray-900">{{ settings.APP_NAME }}</dd>
-        </div>
-        <div>
-            <dt class="text-sm text-gray-500">{{ _('settings.host') }}</dt>
-            <dd class="text-sm font-mono text-gray-900">{{ settings.APP_HOST }}:{{ settings.APP_PORT }}</dd>
-        </div>
-        <div>
-            <dt class="text-sm text-gray-500">{{ _('settings.database') }}</dt>
-            <dd class="text-sm font-mono text-gray-900">{{ settings.DATABASE_URL }}</dd>
-        </div>
-        <div>
-            <dt class="text-sm text-gray-500">{{ _('settings.debug') }}</dt>
-            <dd class="text-sm text-gray-900">{{ _('settings.yes') if settings.debug else _('settings.no') }}</dd>
-        </div>
-    </dl>
+<!-- User Management (Admin only) -->
+{% if is_superuser %}
+<div class="mt-6 bg-white rounded-lg shadow">
+    <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">
+            <span class="mr-2">👥</span> {{ _('settings.user_management') }}
+        </h2>
+        <button onclick="document.getElementById('create-user-modal').classList.remove('hidden')"
+                class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500">
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ _('settings.add_user') }}
+        </button>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ _('login.full_name') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SSO</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ _('common.actions') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200" id="users-tbody">
+                {% for u in users %}
+                <tr id="user-row-{{ u.id }}">
+                    <td class="px-6 py-3 text-sm text-gray-900">{{ u.email }}</td>
+                    <td class="px-6 py-3 text-sm text-gray-700">{{ u.full_name or '-' }}</td>
+                    <td class="px-6 py-3 text-sm">
+                        {% if u.is_superuser %}
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800">Admin</span>
+                        {% else %}
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-gray-100 text-gray-600">User</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{{ u.sso_provider or 'local' }}</td>
+                    <td class="px-6 py-3 text-sm">
+                        {% if u.is_active %}
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-green-100 text-green-700">{{ _('settings.active') }}</span>
+                        {% else %}
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-red-100 text-red-700">{{ _('settings.disabled') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-3 text-sm text-right">
+                        {% if u.id != current_user.id %}
+                        <button onclick="deleteUser({{ u.id }}, '{{ u.email }}')"
+                                class="text-red-600 hover:text-red-800 text-xs font-medium">{{ _('settings.delete') }}</button>
+                        {% else %}
+                        <span class="text-xs text-gray-400">{{ _('settings.current') }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<!-- Create User Modal -->
+<div id="create-user-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="document.getElementById('create-user-modal').classList.add('hidden')"></div>
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ _('settings.add_user') }}</h3>
+            <form id="createUserForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ _('login.email') }}</label>
+                    <input type="email" id="new-user-email" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ _('login.full_name') }}</label>
+                    <input type="text" id="new-user-fullname"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ _('login.password') }}</label>
+                    <input type="password" id="new-user-password" required minlength="6"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="new-user-admin" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                    <label for="new-user-admin" class="ml-2 text-sm text-gray-700">Admin</label>
+                </div>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" onclick="document.getElementById('create-user-modal').classList.add('hidden')"
+                            class="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">{{ _('settings.cancel') }}</button>
+                    <button type="submit"
+                            class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">{{ _('settings.create') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+function gatherSettings(category) {
+    const inputs = category
+        ? document.querySelectorAll(`.setting-input[data-category="${category}"]`)
+        : document.querySelectorAll('.setting-input');
+    const settings = {};
+    inputs.forEach(el => {
+        settings[el.dataset.key] = el.value;
+    });
+    return settings;
+}
+
+async function saveCategorySettings(category) {
+    const settings = gatherSettings(category);
+    await doSave(settings);
+}
+
+async function saveAllSettings() {
+    const settings = gatherSettings(null);
+    await doSave(settings);
+}
+
+async function doSave(settings) {
+    const btn = document.getElementById('save-all-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+        const resp = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings }),
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            showToast(`{{ _("settings.saved_count") }}`.replace('{n}', data.updated.length), 'success');
+            // Mark updated fields as DB-sourced
+            data.updated.forEach(key => {
+                const label = document.querySelector(`label[for="setting-${key}"] span:last-child`);
+                if (label) {
+                    label.className = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-blue-100 text-blue-700';
+                    label.textContent = 'DB';
+                }
+            });
+        } else if (resp.status === 401 || resp.status === 403) {
+            window.location.href = '/login';
+        } else {
+            const data = await resp.json();
+            showToast(data.detail || '{{ _("settings.update_failed") }}', 'error');
+        }
+    } catch (e) {
+        showToast('{{ _("settings.update_failed") }}', 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
 async function updateCron(scheduleId) {
     const input = document.getElementById('cron-' + scheduleId);
     const resp = await fetch('/api/jobs/schedules/' + scheduleId, {
@@ -156,9 +317,59 @@ async function updateCron(scheduleId) {
     });
     if (resp.ok) {
         showToast('{{ _("settings.schedule_updated") }}', 'success');
+    } else if (resp.status === 401 || resp.status === 403) {
+        window.location.href = '/login';
     } else {
         const data = await resp.json();
         showToast(data.detail || '{{ _("settings.update_failed") }}', 'error');
+    }
+}
+
+// ── User Management ──
+document.getElementById('createUserForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('new-user-email').value;
+    const full_name = document.getElementById('new-user-fullname').value;
+    const password = document.getElementById('new-user-password').value;
+    const is_superuser = document.getElementById('new-user-admin').checked;
+
+    try {
+        const resp = await fetch('/auth/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, full_name, password, is_superuser }),
+        });
+        if (resp.ok) {
+            showToast('{{ _("settings.user_created") }}', 'success');
+            document.getElementById('create-user-modal').classList.add('hidden');
+            setTimeout(() => location.reload(), 800);
+        } else if (resp.status === 401 || resp.status === 403) {
+            window.location.href = '/login';
+        } else {
+            const data = await resp.json();
+            showToast(data.detail || '{{ _("settings.update_failed") }}', 'error');
+        }
+    } catch (e) {
+        showToast('{{ _("settings.update_failed") }}', 'error');
+    }
+});
+
+async function deleteUser(userId, email) {
+    if (!confirm('{{ _("settings.confirm_delete_user") }}'.replace('{email}', email))) return;
+    try {
+        const resp = await fetch('/auth/users/' + userId, { method: 'DELETE' });
+        if (resp.ok) {
+            showToast('{{ _("settings.user_deleted") }}', 'success');
+            const row = document.getElementById('user-row-' + userId);
+            if (row) row.remove();
+        } else if (resp.status === 401 || resp.status === 403) {
+            window.location.href = '/login';
+        } else {
+            const data = await resp.json();
+            showToast(data.detail || '{{ _("settings.update_failed") }}', 'error');
+        }
+    } catch (e) {
+        showToast('{{ _("settings.update_failed") }}', 'error');
     }
 }
 </script>

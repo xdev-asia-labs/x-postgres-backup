@@ -22,6 +22,7 @@ from app.i18n import (
 from app.routers import api, auth, dashboard
 from app.scheduler import start_scheduler, stop_scheduler
 from app.services.auth import ensure_default_admin
+from app.services.settings import init_settings_from_db
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
     db = next(get_db())
     try:
         ensure_default_admin(db)
+        init_settings_from_db(db)
     finally:
         db.close()
 

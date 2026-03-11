@@ -84,6 +84,7 @@ class UserRegister(BaseModel):
     password: str
     full_name: Optional[str] = None
     username: Optional[str] = None
+    is_superuser: bool = False
 
 
 class UserResponse(BaseModel):
@@ -103,19 +104,14 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user_by_admin(
     user_data: UserRegister,
     request: Request,
+    current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db),
 ):
-    """Register a new user."""
-    if not settings.ALLOW_REGISTRATION:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Registration is disabled",
-        )
-    
+    """Create a new user (admin only)."""
     # Check if user exists
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
@@ -132,12 +128,17 @@ async def register(
         full_name=user_data.full_name,
         username=user_data.username,
     )
+    # Set admin-specified flags
+    user.is_superuser = user_data.is_superuser
+    user.is_verified = True
+    db.commit()
+    db.refresh(user)
     
     # Log audit
     log_audit(
         db=db,
-        action="user_registered",
-        user_id=user.id,
+        action="user_created_by_admin",
+        user_id=current_user.id,
         resource_type="user",
         resource_id=str(user.id),
         ip_address=get_client_ip(request),

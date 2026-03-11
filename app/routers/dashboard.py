@@ -1,31 +1,45 @@
 """Dashboard HTML routes - serves Jinja2 templates."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import BackupRecord, JobHistory, JobSchedule
+from app.dependencies import get_current_user_optional
+from app.models import BackupRecord, JobHistory, JobSchedule, User
 from app.services import backup as backup_svc
 from app.services import cluster as cluster_svc
 from app.services import restore as restore_svc
+from app.services import settings as settings_svc
 
 router = APIRouter(tags=["dashboard"])
 
 
-def _ctx(request: Request, **kwargs) -> dict:
+def _ctx(request: Request, user: Optional[User] = None, **kwargs) -> dict:
     """Build template context with i18n support."""
     return {
         "request": request,
         "_": request.state._,
         "lang": request.state.lang,
+        "current_user": user,
         **kwargs,
     }
 
 
+def _require_login(user: Optional[User]) -> Optional[RedirectResponse]:
+    """Return a redirect to /login if user is not authenticated, else None."""
+    if user is None:
+        return RedirectResponse(url="/login", status_code=303)
+    return None
+
+
 @router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    """Login page."""
+async def login_page(request: Request, user: Optional[User] = Depends(get_current_user_optional)):
+    """Login page. Redirect to dashboard if already logged in."""
+    if user is not None:
+        return RedirectResponse(url="/", status_code=303)
     return request.app.state.templates.TemplateResponse(
         "login.html",
         _ctx(request),
@@ -33,7 +47,11 @@ async def login_page(request: Request):
 
 
 @router.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, db: Session = Depends(get_db)):
+async def dashboard(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user_optional)):
+    redirect = _require_login(user)
+    if redirect:
+        return redirect
+
     try:
         cluster = await cluster_svc.get_cluster_status()
     except Exception:
@@ -58,6 +76,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
         "dashboard.html",
         _ctx(
             request,
+            user,
             cluster=cluster,
             recent_backups=recent_backups,
             recent_jobs=recent_jobs,
@@ -69,7 +88,11 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/backups", response_class=HTMLResponse)
-async def backups_page(request: Request, db: Session = Depends(get_db)):
+async def backups_page(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user_optional)):
+    redirect = _require_login(user)
+    if redirect:
+        return redirect
+
     records = (
         db.query(BackupRecord)
         .order_by(BackupRecord.started_at.desc())
@@ -86,6 +109,7 @@ async def backups_page(request: Request, db: Session = Depends(get_db)):
         "backups.html",
         _ctx(
             request,
+            user,
             records=records,
             on_disk=on_disk,
             disk=disk,
@@ -95,7 +119,11 @@ async def backups_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/restore", response_class=HTMLResponse)
-async def restore_page(request: Request):
+async def restore_page(request: Request, user: Optional[User] = Depends(get_current_user_optional)):
+    redirect = _require_login(user)
+    if redirect:
+        return redirect
+
     dumps = restore_svc.list_restorable_dumps()
     basebackups = restore_svc.list_restorable_basebackups()
 
@@ -108,6 +136,7 @@ async def restore_page(request: Request):
         "restore.html",
         _ctx(
             request,
+            user,
             dumps=dumps,
             basebackups=basebackups,
             databases=databases,
@@ -117,7 +146,11 @@ async def restore_page(request: Request):
 
 
 @router.get("/jobs", response_class=HTMLResponse)
-def jobs_page(request: Request, db: Session = Depends(get_db)):
+def jobs_page(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user_optional)):
+    redirect = _require_login(user)
+    if redirect:
+        return redirect
+
     schedules = db.query(JobSchedule).all()
     history = (
         db.query(JobHistory)
@@ -129,6 +162,7 @@ def jobs_page(request: Request, db: Session = Depends(get_db)):
         "jobs.html",
         _ctx(
             request,
+            user,
             schedules=schedules,
             history=history,
             page="jobs",
@@ -137,19 +171,29 @@ def jobs_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/settings", response_class=HTMLResponse)
-def settings_page(request: Request, db: Session = Depends(get_db)):
-    from app.config import settings as app_settings
+def settings_page(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user_optional)):
+    redirect = _require_login(user)
+    if redirect:
+        return redirect
 
+    all_settings = settings_svc.get_all_settings(db)
     schedules = db.query(JobSchedule).all()
     disk = backup_svc.get_disk_usage()
+
+    users = []
+    if user and user.is_superuser:
+        users = db.query(User).order_by(User.created_at.desc()).all()
 
     return request.app.state.templates.TemplateResponse(
         "settings.html",
         _ctx(
             request,
-            settings=app_settings,
+            user,
+            all_settings=all_settings,
             schedules=schedules,
             disk=disk,
+            users=users,
+            is_superuser=user.is_superuser if user else False,
             page="settings",
         ),
     )

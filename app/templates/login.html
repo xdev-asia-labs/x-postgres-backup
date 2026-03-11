@@ -97,44 +97,6 @@
                 </div>
             </div>
 
-            <!-- Register Link -->
-            <div class="mt-6 text-center text-sm text-gray-600">
-                {{ _('login.no_account') }}
-                <a href="#" onclick="showRegisterForm(); return false;" class="text-purple-600 hover:text-purple-700 font-medium">{{ _('login.sign_up') }}</a>
-            </div>
-        </div>
-
-        <!-- Register Form (Hidden by default) -->
-        <div id="register-form" class="hidden">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-6">{{ _('login.create_account') }}</h2>
-            <form id="registerForm" class="space-y-4">
-                <div>
-                    <label for="reg-email" class="block text-sm font-medium text-gray-700 mb-1">{{ _('login.email') }}</label>
-                    <input type="email" id="reg-email" name="email" required
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="{{ _('login.email_placeholder') }}">
-                </div>
-                <div>
-                    <label for="reg-fullname" class="block text-sm font-medium text-gray-700 mb-1">{{ _('login.full_name') }}</label>
-                    <input type="text" id="reg-fullname" name="full_name"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="{{ _('login.full_name_placeholder') }}">
-                </div>
-                <div>
-                    <label for="reg-password" class="block text-sm font-medium text-gray-700 mb-1">{{ _('login.password') }}</label>
-                    <input type="password" id="reg-password" name="password" required
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="{{ _('login.password_placeholder') }}">
-                </div>
-                <button type="submit"
-                    class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition duration-200 font-medium">
-                    {{ _('login.create_btn') }}
-                </button>
-            </form>
-            <div class="mt-6 text-center text-sm text-gray-600">
-                {{ _('login.have_account') }}
-                <a href="#" onclick="showLoginForm(); return false;" class="text-purple-600 hover:text-purple-700 font-medium">{{ _('login.sign_in_link') }}</a>
-            </div>
         </div>
     </div>
 
@@ -142,21 +104,9 @@
         const i18n = {
             loginSuccess: '{{ _("login.login_success") }}',
             loginFailed: '{{ _("login.login_failed") }}',
-            registerSuccess: '{{ _("login.register_success") }}',
-            registerFailed: '{{ _("login.register_failed") }}',
             errorGeneric: '{{ _("login.error_generic") }}'
         };
 
-        function showRegisterForm() {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('register-form').classList.remove('hidden');
-            hideMessages();
-        }
-        function showLoginForm() {
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('login-form').classList.remove('hidden');
-            hideMessages();
-        }
         function showError(msg) {
             const d = document.getElementById('error-message'), t = document.getElementById('error-text');
             t.textContent = msg; d.classList.remove('hidden');
@@ -181,17 +131,6 @@
                 if (resp.ok) { showSuccess(i18n.loginSuccess); setTimeout(() => { window.location.href = '/'; }, 1000); }
                 else { showError(data.detail || i18n.loginFailed); }
             } catch (err) { showError(i18n.errorGeneric); console.error('Login error:', err); }
-        });
-
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); hideMessages();
-            const formData = { email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value, full_name: document.getElementById('reg-fullname').value || null };
-            try {
-                const resp = await fetch('/auth/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) });
-                const data = await resp.json();
-                if (resp.ok) { showSuccess(i18n.registerSuccess); setTimeout(() => { showLoginForm(); }, 2000); }
-                else { showError(data.detail || i18n.registerFailed); }
-            } catch (err) { showError(i18n.errorGeneric); console.error('Register error:', err); }
         });
     </script>
 </body>

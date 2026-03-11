@@ -5,12 +5,14 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import BackupRecord, JobHistory, JobSchedule
+from app.dependencies import get_current_user, get_current_superuser
+from app.models import BackupRecord, JobHistory, JobSchedule, User
 from app.scheduler import JOB_MAP, sync_scheduler_from_db
 from app.services import backup as backup_svc
 from app.services import cluster as cluster_svc
 from app.services import restore as restore_svc
 from app.services import verify as verify_svc
+from app.services import settings as settings_svc
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -34,22 +36,31 @@ class ScheduleUpdate(BaseModel):
     is_enabled: bool | None = None
 
 
+class SettingsUpdate(BaseModel):
+    settings: dict[str, str]
+
+
 # --- Cluster ---
 
+@router.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 @router.get("/cluster/status")
-async def cluster_status():
+async def cluster_status(_user: User = Depends(get_current_user)):
     return await cluster_svc.get_cluster_status()
 
 
 @router.get("/cluster/databases")
-async def cluster_databases():
+async def cluster_databases(_user: User = Depends(get_current_user)):
     return await cluster_svc.get_databases()
 
 
 # --- Backups ---
 
 @router.get("/backups")
-def list_backups(db: Session = Depends(get_db)):
+def list_backups(db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     records = (
         db.query(BackupRecord)
         .order_by(BackupRecord.started_at.desc())
@@ -60,7 +71,7 @@ def list_backups(db: Session = Depends(get_db)):
 
 
 @router.get("/backups/disk")
-def list_backups_on_disk():
+def list_backups_on_disk(_user: User = Depends(get_current_user)):
     return {
         "basebackups": backup_svc.list_backups(),
         "pgdumps": backup_svc.list_dumps(),
@@ -69,7 +80,7 @@ def list_backups_on_disk():
 
 
 @router.post("/backups/run")
-async def run_backup(req: BackupRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def run_backup(req: BackupRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     if req.backup_type == "basebackup":
         record = await backup_svc.run_basebackup(db)
     elif req.backup_type == "pgdump":
@@ -81,7 +92,7 @@ async def run_backup(req: BackupRequest, background_tasks: BackgroundTasks, db: 
 
 
 @router.get("/backups/{backup_id}")
-def get_backup(backup_id: int, db: Session = Depends(get_db)):
+def get_backup(backup_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     record = db.query(BackupRecord).filter(BackupRecord.id == backup_id).first()
     if not record:
         raise HTTPException(404, "Backup not found")
@@ -91,7 +102,7 @@ def get_backup(backup_id: int, db: Session = Depends(get_db)):
 # --- Restore ---
 
 @router.get("/restore/available")
-def list_restorable():
+def list_restorable(_user: User = Depends(get_current_user)):
     return {
         "dumps": restore_svc.list_restorable_dumps(),
         "basebackups": restore_svc.list_restorable_basebackups(),
@@ -99,7 +110,7 @@ def list_restorable():
 
 
 @router.post("/restore/run")
-async def run_restore(req: RestoreRequest, db: Session = Depends(get_db)):
+async def run_restore(req: RestoreRequest, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     record = await restore_svc.restore_pgdump(
         db, req.dump_file, req.target_database,
         req.target_host, req.drop_existing,
@@ -110,31 +121,31 @@ async def run_restore(req: RestoreRequest, db: Session = Depends(get_db)):
 # --- Verify ---
 
 @router.get("/verify")
-def verify_all():
+def verify_all(_user: User = Depends(get_current_user)):
     return verify_svc.verify_all_backups()
 
 
 @router.get("/verify/{path:path}")
-def verify_single(path: str):
+def verify_single(path: str, _user: User = Depends(get_current_user)):
     return verify_svc.verify_backup(f"/{path}" if not path.startswith("/") else path)
 
 
 # --- Disk ---
 
 @router.get("/disk")
-def disk_usage():
+def disk_usage(_user: User = Depends(get_current_user)):
     return backup_svc.get_disk_usage()
 
 
 @router.post("/cleanup")
-def run_cleanup():
+def run_cleanup(_user: User = Depends(get_current_user)):
     return backup_svc.cleanup_old_backups()
 
 
 # --- Jobs ---
 
 @router.get("/jobs/schedules")
-def list_schedules(db: Session = Depends(get_db)):
+def list_schedules(db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return [
         {
             "id": s.id, "job_name": s.job_name, "job_type": s.job_type,
@@ -148,7 +159,7 @@ def list_schedules(db: Session = Depends(get_db)):
 
 
 @router.put("/jobs/schedules/{schedule_id}")
-def update_schedule(schedule_id: int, req: ScheduleUpdate, db: Session = Depends(get_db)):
+def update_schedule(schedule_id: int, req: ScheduleUpdate, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     schedule = db.query(JobSchedule).filter(JobSchedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(404, "Schedule not found")
@@ -165,7 +176,7 @@ def update_schedule(schedule_id: int, req: ScheduleUpdate, db: Session = Depends
 
 
 @router.post("/jobs/run/{job_name}")
-async def run_job_now(job_name: str):
+async def run_job_now(job_name: str, _user: User = Depends(get_current_user)):
     func = JOB_MAP.get(job_name)
     if not func:
         raise HTTPException(404, f"Unknown job: {job_name}")
@@ -174,7 +185,7 @@ async def run_job_now(job_name: str):
 
 
 @router.get("/jobs/history")
-def job_history(limit: int = 50, db: Session = Depends(get_db)):
+def job_history(limit: int = 50, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     records = (
         db.query(JobHistory)
         .order_by(JobHistory.started_at.desc())
@@ -208,3 +219,23 @@ def _record_to_dict(r: BackupRecord) -> dict:
         "started_at": r.started_at.isoformat() if r.started_at else None,
         "finished_at": r.finished_at.isoformat() if r.finished_at else None,
     }
+
+
+# --- Settings (Admin only) ---
+
+@router.get("/settings")
+def get_settings(db: Session = Depends(get_db), _user: User = Depends(get_current_superuser)):
+    return settings_svc.get_all_settings(db)
+
+
+@router.put("/settings")
+def update_settings(req: SettingsUpdate, db: Session = Depends(get_db), _user: User = Depends(get_current_superuser)):
+    updated = settings_svc.update_settings_bulk(db, req.settings)
+    return {"status": "ok", "updated": updated}
+
+
+@router.get("/settings/{key}")
+def get_single_setting(key: str, db: Session = Depends(get_db), _user: User = Depends(get_current_superuser)):
+    if key not in settings_svc.ALL_EDITABLE_KEYS:
+        raise HTTPException(404, f"Setting '{key}' not found")
+    return {"key": key, "value": settings_svc.get_setting(db, key)}

@@ -39,10 +39,10 @@ class Settings:
     PG_PORT: int = int(os.getenv("PG_PORT", "5432"))
     PG_USER: str = os.getenv("PG_USER", "postgres")
     PG_PASSWORD: str = os.getenv("PG_PASSWORD", "")
-    PG_VERSION: str = os.getenv("PG_VERSION", "18")
+    PG_VERSION: str = os.getenv("PG_VERSION", "18.3")
     PG_BIN_DIR: str = os.getenv(
         "PG_BIN_DIR",
-        f"/usr/lib/postgresql/{os.getenv('PG_VERSION', '18')}/bin",
+        f"/usr/lib/postgresql/{os.getenv('PG_VERSION', '18.3').split('.')[0]}/bin",
     )
 
     # Replication
@@ -61,8 +61,8 @@ class Settings:
     SCHEDULE_VERIFY: str = os.getenv("SCHEDULE_VERIFY", "0 4 * * *")
     SCHEDULE_CLEANUP: str = os.getenv("SCHEDULE_CLEANUP", "0 6 * * *")
 
-    # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///data/backup_manager.db")
+    # Database (PostgreSQL)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://xpb:xpb@localhost:5432/xpb")
 
     # Telegram Notifications
     TELEGRAM_ENABLED: bool = os.getenv("TELEGRAM_ENABLED", "false").lower() == "true"
@@ -107,9 +107,9 @@ class Settings:
     MICROSOFT_REDIRECT_URI: str = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:8000/auth/microsoft/callback")
 
     # User Management
-    ALLOW_REGISTRATION: bool = os.getenv("ALLOW_REGISTRATION", "true").lower() == "true"
-    DEFAULT_ADMIN_EMAIL: str = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@example.com")
-    DEFAULT_ADMIN_PASSWORD: str = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")
+    ALLOW_REGISTRATION: bool = os.getenv("ALLOW_REGISTRATION", "false").lower() == "true"
+    DEFAULT_ADMIN_EMAIL: str = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@localhost")
+    DEFAULT_ADMIN_PASSWORD: str = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin")
     REQUIRE_EMAIL_VERIFICATION: bool = os.getenv("REQUIRE_EMAIL_VERIFICATION", "false").lower() == "true"
 
     @property

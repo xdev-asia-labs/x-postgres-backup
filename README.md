@@ -392,10 +392,10 @@ All configuration is done via environment variables in the `.env` file.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SCHEDULE_BASEBACKUP` | 0 2 * * * | pg_basebackup schedule (daily at 2:00 AM) |
-| `SCHEDULE_PGDUMP` | 0 3 * * * | pg_dump schedule (daily at 3:00 AM) |
-| `SCHEDULE_VERIFY` | 0 4 * * * | Backup verification schedule (daily at 4:00 AM) |
-| `SCHEDULE_CLEANUP` | 0 6 * * * | Old backup cleanup schedule (daily at 6:00 AM) |
+| `SCHEDULE_BASEBACKUP` | 0 2 ** * | pg_basebackup schedule (daily at 2:00 AM) |
+| `SCHEDULE_PGDUMP` | 0 3 ** * | pg_dump schedule (daily at 3:00 AM) |
+| `SCHEDULE_VERIFY` | 0 4 ** * | Backup verification schedule (daily at 4:00 AM) |
+| `SCHEDULE_CLEANUP` | 0 6 ** * | Old backup cleanup schedule (daily at 6:00 AM) |
 
 **Cron format**: `minute hour day month day_of_week`
 
@@ -421,6 +421,7 @@ Examples:
 1. **Create a new bot**: Open Telegram and find [@BotFather](https://t.me/BotFather). Send `/newbot`, set a name and username, and save the **Bot Token**.
 2. **Get your Chat ID**: Send a message to your bot, then visit `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates` and find `"chat":{"id":123456789}`.
 3. **Update `.env`**:
+
    ```bash
    TELEGRAM_ENABLED=true
    TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
@@ -444,6 +445,7 @@ Examples:
 
 1. **Create an App Password**: Go to [Google Account Security](https://myaccount.google.com/security), enable **2-Step Verification**, then go to [App Passwords](https://myaccount.google.com/apppasswords) and generate a 16-character password.
 2. **Update `.env`**:
+
    ```bash
    EMAIL_ENABLED=true
    EMAIL_SMTP_HOST=smtp.gmail.com
@@ -458,6 +460,7 @@ Examples:
 ##### Other SMTP providers
 
 **Office 365 / Outlook:**
+
 ```bash
 EMAIL_SMTP_HOST=smtp.office365.com
 EMAIL_SMTP_PORT=587
@@ -465,6 +468,7 @@ EMAIL_USE_TLS=true
 ```
 
 **Yahoo Mail:**
+
 ```bash
 EMAIL_SMTP_HOST=smtp.mail.yahoo.com
 EMAIL_SMTP_PORT=587
@@ -500,8 +504,8 @@ AUTH_ENABLED=false
 On first startup, the system automatically creates an admin account:
 
 ```bash
-DEFAULT_ADMIN_EMAIL=admin@example.com
-DEFAULT_ADMIN_PASSWORD=admin123
+DEFAULT_ADMIN_EMAIL=admin@localhost
+DEFAULT_ADMIN_PASSWORD=admin
 ```
 
 > ⚠️ **IMPORTANT**: Change the password immediately after the first login!
@@ -511,6 +515,7 @@ DEFAULT_ADMIN_PASSWORD=admin123
 1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Credentials** → **Create OAuth 2.0 Client ID**
 2. Add Authorized redirect URIs: `http://localhost:8000/auth/google/callback` (dev) or `https://yourdomain.com/auth/google/callback` (production)
 3. Update `.env`:
+
    ```bash
    GOOGLE_CLIENT_ID=123456789-abc123xyz.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=GOCSPX-abc123xyz789
@@ -523,6 +528,7 @@ DEFAULT_ADMIN_PASSWORD=admin123
 2. Add Redirect URI: `http://localhost:8000/auth/microsoft/callback`
 3. Under **Certificates & secrets**, create a new client secret
 4. Update `.env`:
+
    ```bash
    MICROSOFT_CLIENT_ID=12345678-1234-1234-1234-123456789abc
    MICROSOFT_CLIENT_SECRET=abc123~xyz789.def456
@@ -531,6 +537,7 @@ DEFAULT_ADMIN_PASSWORD=admin123
    ```
 
 **Tenant ID options:**
+
 - `common` — All Microsoft accounts (personal + organizational)
 - `organizations` — Organizational accounts only
 - `consumers` — Personal Microsoft accounts only
@@ -544,7 +551,7 @@ DEFAULT_ADMIN_PASSWORD=admin123
 # Get access token
 curl -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}'
+  -d '{"email":"admin@localhost","password":"admin"}'
 
 # Use token in API requests
 curl http://localhost:8000/api/backups \
@@ -561,13 +568,14 @@ curl -X POST http://localhost:8000/auth/refresh \
 ### Login
 
 1. Navigate to `http://localhost:8000/login`
-2. Sign in with the default credentials: `admin@example.com` / `admin123`
+2. Sign in with the default credentials: `admin@localhost` / `admin`
 3. Alternatively, use **Google** or **Microsoft** SSO buttons
 4. If registration is enabled (`ALLOW_REGISTRATION=true`), click **Sign up** to create a new account
 
 ### Dashboard Overview
 
 After logging in, the main dashboard displays:
+
 - **Cluster Status**: Shows node states (Leader, Replica, lag)
 - **Recent Backups**: Latest backup records with status
 - **Disk Usage**: Storage consumption monitoring
@@ -909,11 +917,14 @@ sudo chmod -R 755 /var/backups/postgresql
 **Error: `No cluster leader found`**
 
 1. Check that Patroni nodes are running:
+
    ```bash
    curl http://10.10.10.11:8008/patroni
    ```
+
 2. Verify `PATRONI_NODES` in `.env`
 3. If Patroni uses authentication, enable it:
+
    ```bash
    PATRONI_AUTH_ENABLED=true
    PATRONI_AUTH_USERNAME=your_username
@@ -925,9 +936,11 @@ sudo chmod -R 755 /var/backups/postgresql
 **Error: `FATAL: no pg_hba.conf entry for replication`**
 
 Add a replication entry in `pg_hba.conf`:
+
 ```
 host    replication    replicator    <backup_server_ip>/32    md5
 ```
+
 Then reload: `sudo systemctl reload postgresql`
 
 **Error: `pg_basebackup: command not found`**
@@ -946,6 +959,7 @@ PG_BIN_DIR=/usr/bin
 ### Notifications not working
 
 **Telegram not receiving alerts:**
+
 ```bash
 # Verify bot token
 curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe"
@@ -956,6 +970,7 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage" \
 ```
 
 **Email not sending:**
+
 1. Test SMTP connection: `telnet smtp.gmail.com 587`
 2. For Gmail: ensure 2-Step Verification is enabled and you're using an App Password
 3. Check logs: `docker compose logs -f | grep -i "email\|smtp"`
@@ -986,11 +1001,13 @@ find /var/backups/postgresql -type f -mtime +7 -delete
 ### Viewing Logs
 
 **Development (venv):**
+
 ```bash
 uvicorn app.main:app --log-config logging.yaml > logs/app.log 2>&1
 ```
 
 **Docker:**
+
 ```bash
 docker compose logs -f
 docker compose logs -f x-postgres-backup
@@ -998,6 +1015,7 @@ docker compose logs | grep -i "error\|backup"
 ```
 
 **Systemd:**
+
 ```bash
 sudo journalctl -u x-postgres-backup -f
 sudo journalctl -u x-postgres-backup --since "2024-01-15 10:00:00"

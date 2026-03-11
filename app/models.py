@@ -5,6 +5,19 @@ from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
 from app.database import Base
 
 
+class AppSetting(Base):
+    """Application settings stored in database (editable via admin UI)."""
+
+    __tablename__ = "app_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(100), unique=True, nullable=False, index=True)
+    value = Column(Text, nullable=False, default="")
+    description = Column(String(500), nullable=True)
+    category = Column(String(50), nullable=False, default="general")
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
 class BackupRecord(Base):
     """Tracks all backup operations."""
 
