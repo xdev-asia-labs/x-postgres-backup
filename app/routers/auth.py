@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session

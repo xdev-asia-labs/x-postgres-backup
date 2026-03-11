@@ -30,9 +30,9 @@ RUN apt-get update && \
     | gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    postgresql-client-16 \
-    postgresql-client-17 \
-    && apt-get purge -y --auto-remove gnupg2 && \
+    postgresql-client-16 && \
+    apt-get install -y --no-install-recommends postgresql-client-17 || true && \
+    apt-get purge -y --auto-remove gnupg2 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
